@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Your Email - KneeKlinic</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f4f7f9;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 30px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .header p {
+        margin: 10px 0 0;
+        font-size: 16px;
+        opacity: 0.95;
+      }
+      .content {
+        padding: 40px 30px;
+      }
+      .greeting {
+        font-size: 18px;
+        color: #2d3748;
+        margin-bottom: 20px;
+      }
+      .message {
+        color: #4a5568;
+        margin-bottom: 30px;
+        font-size: 15px;
+      }
+      .otp-container {
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        border: 2px dashed #667eea;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        margin: 30px 0;
+      }
+      .otp-label {
+        font-size: 14px;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+      .otp-code {
+        font-size: 42px;
+        font-weight: 700;
+        color: #667eea;
+        letter-spacing: 8px;
+        font-family: "Courier New", monospace;
+        margin: 10px 0;
+      }
+      .expiry-notice {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 25px 0;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #856404;
+      }
+      .instructions {
+        background: #e6f7ff;
+        border-left: 4px solid #1890ff;
+        padding: 15px;
+        margin: 25px 0;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #0050b3;
+      }
+      .security-notice {
+        background: #fff1f0;
+        border-left: 4px solid #ff4d4f;
+        padding: 15px;
+        margin: 25px 0;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #a8071a;
+      }
+      .footer {
+        background: #f7fafc;
+        padding: 30px;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+      }
+      .footer p {
+        margin: 5px 0;
+        font-size: 13px;
+        color: #718096;
+      }
+      .brand {
+        color: #667eea;
+        font-weight: 600;
+      }
+      @media only screen and (max-width: 600px) {
+        .container {
+          margin: 20px;
+        }
+        .header {
+          padding: 30px 20px;
+        }
+        .content {
+          padding: 30px 20px;
+        }
+        .otp-code {
+          font-size: 32px;
+          letter-spacing: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🏥 KneeKlinic</h1>
+        <p>Email Verification</p>
+      </div>
+
+      <div class="content">
+        <div class="greeting">Hello <%= firstName %>! 👋</div>
+
+        <div class="message">Welcome to <strong>KneeKlinic</strong>! We're excited to have you join our platform as a <strong><%= userType %></strong>.</div>
+
+        <div class="message">To complete your registration and verify your email address, please use the One-Time Password (OTP) below:</div>
+
+        <div class="otp-container">
+          <div class="otp-label">Your Verification Code</div>
+          <div class="otp-code"><%= otp %></div>
+        </div>
+
+        <div class="expiry-notice">⏰ <strong>Important:</strong> This OTP will expire in <strong><%= expiryMinutes %> minutes</strong>. Please verify your email soon!</div>
+
+        <div class="instructions">
+          📋 <strong>Next Steps:</strong>
+          <ol style="margin: 10px 0 0 20px; padding: 0">
+            <li>Enter the OTP code on the verification page</li>
+            <li>Complete your account setup</li>
+            <li>Start using KneeKlinic services</li>
+          </ol>
+        </div>
+
+        <div class="security-notice">🔒 <strong>Security Notice:</strong> If you didn't create an account with KneeKlinic, please ignore this email. Never share your OTP with anyone.</div>
+      </div>
+
+      <div class="footer">
+        <p><strong class="brand">KneeKlinic</strong></p>
+        <p>Advanced Knee Care & Orthopedic Solutions</p>
+        <p style="margin-top: 15px">This is an automated email. Please do not reply.</p>
+        <p>&copy; <%= new Date().getFullYear() %> KneeKlinic. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
