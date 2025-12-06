@@ -308,7 +308,12 @@ export const insertPatientInjuriesSchema = z.object({
 export const signupSchema = z
   .object({
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])[^\s]+$/, {
+        message: "Password must include upper and lower case letters, a number, and a special character, and cannot contain spaces",
+      }),
     confirmPassword: z.string(),
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),

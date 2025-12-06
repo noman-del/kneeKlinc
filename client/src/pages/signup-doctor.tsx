@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signupSchema, type SignupData } from "@shared/schema";
-import { ArrowLeft, Eye, EyeOff, Stethoscope, Sparkles } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Stethoscope, Sparkles, CheckCircle2, Circle } from "lucide-react";
 import OTPVerification from "@/components/OTPVerification";
 
 interface SignupResponse {
@@ -32,13 +32,26 @@ export default function SignupDoctor() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
+    watch,
   } = useForm<SignupData>({
     resolver: zodResolver(signupSchema),
+    mode: "onChange",
     defaultValues: {
       userType: "doctor",
     },
   });
+
+  const passwordValue = watch("password") || "";
+
+  const passwordChecks = {
+    length: passwordValue.length >= 8,
+    upper: /[A-Z]/.test(passwordValue),
+    lower: /[a-z]/.test(passwordValue),
+    number: /\d/.test(passwordValue),
+    special: /[^A-Za-z0-9]/.test(passwordValue),
+    noSpace: passwordValue.length > 0 && !/\s/.test(passwordValue),
+  };
 
   const signupMutation = useMutation<SignupResponse, Error, SignupData>({
     mutationFn: async (data) => {
@@ -187,6 +200,43 @@ export default function SignupDoctor() {
                   </button>
                 </div>
                 {errors.password && <p className="text-sm text-cyan-300">{errors.password.message}</p>}
+                <div className="mt-2 space-y-1 text-xs text-cyan-100/80">
+                  <p className="font-medium text-cyan-50">Password must include:</p>
+                  {[
+                    {
+                      key: "length",
+                      label: "At least 8 characters",
+                    },
+                    {
+                      key: "upper",
+                      label: "At least one uppercase letter",
+                    },
+                    {
+                      key: "lower",
+                      label: "At least one lowercase letter",
+                    },
+                    {
+                      key: "number",
+                      label: "At least one number",
+                    },
+                    {
+                      key: "special",
+                      label: "At least one special character",
+                    },
+                    {
+                      key: "noSpace",
+                      label: "No spaces",
+                    },
+                  ].map((rule) => {
+                    const satisfied = passwordChecks[rule.key as keyof typeof passwordChecks];
+                    return (
+                      <div key={rule.key} className="flex items-center space-x-2">
+                        {satisfied ? <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" /> : <Circle className="h-3.5 w-3.5 text-cyan-900/40" />}
+                        <span className={satisfied ? "text-cyan-200" : "text-cyan-100/80"}>{rule.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -203,7 +253,7 @@ export default function SignupDoctor() {
               </div>
 
               <div className="pt-4">
-                <Button type="submit" className="w-full h-14 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-lg shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 transform hover:scale-105" disabled={signupMutation.isPending}>
+                <Button type="submit" className="w-full h-14 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-lg shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 transform hover:scale-105" disabled={signupMutation.isPending || !isValid}>
                   {signupMutation.isPending ? "Creating Account..." : "Create Healthcare Provider Account"}
                 </Button>
               </div>

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Mail, Lock, Save, Eye, EyeOff, Camera, Upload, Trash2, Stethoscope } from "lucide-react";
+import { User, Mail, Lock, Save, Eye, EyeOff, Camera, Upload, Trash2, Stethoscope, CheckCircle2, Circle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
@@ -59,6 +59,17 @@ export default function Profile() {
 
   // Check if password data has changes
   const hasPasswordChanges = passwordData.currentPassword.trim() !== "" && passwordData.newPassword.trim() !== "" && passwordData.confirmPassword.trim() !== "";
+
+  const passwordChecks = {
+    length: passwordData.newPassword.length >= 8,
+    upper: /[A-Z]/.test(passwordData.newPassword),
+    lower: /[a-z]/.test(passwordData.newPassword),
+    number: /\d/.test(passwordData.newPassword),
+    special: /[^A-Za-z0-9]/.test(passwordData.newPassword),
+    noSpace: passwordData.newPassword.length > 0 && !/\s/.test(passwordData.newPassword),
+  };
+
+  const allPasswordRulesSatisfied = Object.values(passwordChecks).every(Boolean);
 
   const isDoctor = user?.userType === "doctor";
 
@@ -399,24 +410,10 @@ export default function Profile() {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
+    if (!allPasswordRulesSatisfied) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Password strength validation
-    const hasUpperCase = /[A-Z]/.test(passwordData.newPassword);
-    const hasLowerCase = /[a-z]/.test(passwordData.newPassword);
-    const hasNumbers = /\d/.test(passwordData.newPassword);
-
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-      toast({
-        title: "Error",
-        description: "Password must contain at least one uppercase letter, one lowercase letter, and one number.",
+        description: "Password must be at least 8 characters and include upper and lower case letters, a number, a special character, and no spaces.",
         variant: "destructive",
       });
       return;
@@ -690,6 +687,43 @@ export default function Profile() {
                       {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <div className="mt-2 space-y-1 text-xs text-slate-300/90">
+                    <p className="font-medium text-slate-100">Password must include:</p>
+                    {[
+                      {
+                        key: "length",
+                        label: "At least 8 characters",
+                      },
+                      {
+                        key: "upper",
+                        label: "At least one uppercase letter",
+                      },
+                      {
+                        key: "lower",
+                        label: "At least one lowercase letter",
+                      },
+                      {
+                        key: "number",
+                        label: "At least one number",
+                      },
+                      {
+                        key: "special",
+                        label: "At least one special character",
+                      },
+                      {
+                        key: "noSpace",
+                        label: "No spaces",
+                      },
+                    ].map((rule) => {
+                      const satisfied = passwordChecks[rule.key as keyof typeof passwordChecks];
+                      return (
+                        <div key={rule.key} className="flex items-center space-x-2">
+                          {satisfied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-slate-600" />}
+                          <span className={satisfied ? "text-emerald-200" : "text-slate-300/90"}>{rule.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-slate-200 font-medium">Confirm New Password</Label>
@@ -701,7 +735,11 @@ export default function Profile() {
                     </button>
                   </div>
                 </div>
-                <Button type="submit" disabled={!hasPasswordChanges} className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                <Button
+                  type="submit"
+                  disabled={!hasPasswordChanges || !allPasswordRulesSatisfied || passwordData.newPassword !== passwordData.confirmPassword}
+                  className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
                   <Lock className="w-4 h-4 mr-2" />
                   Update Password
                 </Button>

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Eye, EyeOff, UserPlus, Stethoscope, Heart } from "lucide-react";
+import { Loader2, Eye, EyeOff, UserPlus, Stethoscope, Heart, CheckCircle2, Circle } from "lucide-react";
 import { signupSchema, type SignupData } from "@shared/schema";
 
 interface SignupResponse {
@@ -27,14 +27,25 @@ export default function Signup() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
     watch,
     setValue,
   } = useForm<SignupData>({
     resolver: zodResolver(signupSchema),
+    mode: "onChange",
   });
 
   const userType = watch("userType");
+  const passwordValue = watch("password") || "";
+
+  const passwordChecks = {
+    length: passwordValue.length >= 8,
+    upper: /[A-Z]/.test(passwordValue),
+    lower: /[a-z]/.test(passwordValue),
+    number: /\d/.test(passwordValue),
+    special: /[^A-Za-z0-9]/.test(passwordValue),
+    noSpace: passwordValue.length > 0 && !/\s/.test(passwordValue),
+  };
 
   const signupMutation = useMutation<SignupResponse, Error, SignupData>({
     mutationFn: async (data) => {
@@ -55,7 +66,7 @@ export default function Signup() {
       // Store token in localStorage
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      
+
       // Redirect based on user type
       if (data.user.userType === "doctor") {
         setLocation("/doctor-registration");
@@ -79,44 +90,30 @@ export default function Signup() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">Create Account</CardTitle>
-          <CardDescription className="text-gray-600">
-            Join JointSense AI to access personalized knee care
-          </CardDescription>
+          <CardDescription className="text-gray-600">Join JointSense AI to access personalized knee care</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* User Type Selection */}
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-700">I am a:</Label>
-              <RadioGroup
-                value={userType}
-                onValueChange={(value) => setValue("userType", value as "doctor" | "patient")}
-                className="grid grid-cols-2 gap-4"
-              >
+              <RadioGroup value={userType} onValueChange={(value) => setValue("userType", value as "doctor" | "patient")} className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="patient" id="patient" />
-                  <Label
-                    htmlFor="patient"
-                    className="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
+                  <Label htmlFor="patient" className="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                     <Heart className="h-4 w-4 text-red-500" />
                     <span>Patient</span>
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="doctor" id="doctor" />
-                  <Label
-                    htmlFor="doctor"
-                    className="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
+                  <Label htmlFor="doctor" className="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                     <Stethoscope className="h-4 w-4 text-blue-500" />
                     <span>Doctor</span>
                   </Label>
                 </div>
               </RadioGroup>
-              {errors.userType && (
-                <p className="text-sm text-red-600">{errors.userType.message}</p>
-              )}
+              {errors.userType && <p className="text-sm text-red-600">{errors.userType.message}</p>}
             </div>
 
             {/* Name Fields */}
@@ -125,29 +122,15 @@ export default function Signup() {
                 <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
                   First Name
                 </Label>
-                <Input
-                  id="firstName"
-                  {...register("firstName")}
-                  className="w-full"
-                  placeholder="John"
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-red-600">{errors.firstName.message}</p>
-                )}
+                <Input id="firstName" {...register("firstName")} className="w-full" placeholder="John" />
+                {errors.firstName && <p className="text-sm text-red-600">{errors.firstName.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
                   Last Name
                 </Label>
-                <Input
-                  id="lastName"
-                  {...register("lastName")}
-                  className="w-full"
-                  placeholder="Doe"
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-red-600">{errors.lastName.message}</p>
-                )}
+                <Input id="lastName" {...register("lastName")} className="w-full" placeholder="Doe" />
+                {errors.lastName && <p className="text-sm text-red-600">{errors.lastName.message}</p>}
               </div>
             </div>
 
@@ -156,16 +139,8 @@ export default function Signup() {
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email Address
               </Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                className="w-full"
-                placeholder="john.doe@example.com"
-              />
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
-              )}
+              <Input id="email" type="email" {...register("email")} className="w-full" placeholder="john.doe@example.com" />
+              {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
             </div>
 
             {/* Password */}
@@ -174,28 +149,49 @@ export default function Signup() {
                 Password
               </Label>
               <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  {...register("password")}
-                  className="w-full pr-10"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
+                <Input id="password" type={showPassword ? "text" : "password"} {...register("password")} className="w-full pr-10" placeholder="••••••••" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
-              )}
+              {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+              <div className="mt-2 space-y-1 text-xs text-gray-600">
+                <p className="font-medium text-gray-700">Password must include:</p>
+                {[
+                  {
+                    key: "length",
+                    label: "At least 8 characters",
+                  },
+                  {
+                    key: "upper",
+                    label: "At least one uppercase letter",
+                  },
+                  {
+                    key: "lower",
+                    label: "At least one lowercase letter",
+                  },
+                  {
+                    key: "number",
+                    label: "At least one number",
+                  },
+                  {
+                    key: "special",
+                    label: "At least one special character",
+                  },
+                  {
+                    key: "noSpace",
+                    label: "No spaces",
+                  },
+                ].map((rule) => {
+                  const satisfied = passwordChecks[rule.key as keyof typeof passwordChecks];
+                  return (
+                    <div key={rule.key} className="flex items-center space-x-2">
+                      {satisfied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Circle className="h-3.5 w-3.5 text-gray-300" />}
+                      <span className={satisfied ? "text-emerald-600" : "text-gray-600"}>{rule.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Confirm Password */}
@@ -204,45 +200,23 @@ export default function Signup() {
                 Confirm Password
               </Label>
               <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  {...register("confirmPassword")}
-                  className="w-full pr-10"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
+                <Input id="confirmPassword" type={showConfirmPassword ? "text" : "password"} {...register("confirmPassword")} className="w-full pr-10" placeholder="••••••••" />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                 </button>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
-              )}
+              {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>}
             </div>
 
             {/* Error Display */}
             {signupMutation.error && (
               <Alert variant="destructive" className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800 font-medium">
-                  {signupMutation.error.message}
-                </AlertDescription>
+                <AlertDescription className="text-red-800 font-medium">{signupMutation.error.message}</AlertDescription>
               </Alert>
             )}
 
             {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full bg-medical-blue hover:bg-medical-blue/90"
-              disabled={signupMutation.isPending}
-            >
+            <Button type="submit" className="w-full bg-medical-blue hover:bg-medical-blue/90" disabled={signupMutation.isPending || !isValid}>
               {signupMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -257,10 +231,7 @@ export default function Signup() {
           {/* Login Link */}
           <div className="text-center text-sm text-gray-600">
             Already have an account?{" "}
-            <button
-              onClick={() => setLocation("/login")}
-              className="text-medical-blue hover:underline font-medium"
-            >
+            <button onClick={() => setLocation("/login")} className="text-medical-blue hover:underline font-medium">
               Sign in
             </button>
           </div>
