@@ -83,6 +83,8 @@ export interface IAppointment extends Document {
   status: "scheduled" | "confirmed" | "completed" | "cancelled";
   reason?: string;
   notes?: string;
+  meetingUrl?: string;
+  reminderSent?: boolean; // Track if virtual visit reminder email has been sent
   aiAnalysisId?: mongoose.Types.ObjectId; // Link to AI analysis if discussed
   createdAt: Date;
   updatedAt: Date;
@@ -99,6 +101,8 @@ const appointmentSchema = new Schema<IAppointment>(
     status: { type: String, default: "scheduled", enum: ["scheduled", "confirmed", "completed", "cancelled"] },
     reason: String,
     notes: String,
+    meetingUrl: String,
+    reminderSent: { type: Boolean, default: false },
     aiAnalysisId: { type: Schema.Types.ObjectId, ref: "AIAnalysis" },
   },
   {
