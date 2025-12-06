@@ -103,6 +103,42 @@ KneeKlinic Team`;
     });
   }
 
+  // Send virtual visit reminder email with join link
+  async sendVirtualVisitReminderEmail(options: { targetEmail: string; targetName: string; doctorName: string; patientName: string; appointmentDate: string; appointmentTime: string; meetingUrl: string }): Promise<void> {
+    if (!this.transporter || !this.isConfigured) {
+      console.warn("Email service not configured - skipping virtual visit reminder email");
+      return;
+    }
+
+    const { targetEmail, targetName, doctorName, patientName, appointmentDate, appointmentTime, meetingUrl } = options;
+
+    const subject = `Your virtual visit starts soon - ${appointmentDate} ${appointmentTime}`;
+    const text = `Dear ${targetName},
+
+This is a reminder that your virtual appointment is starting soon.
+
+Doctor: ${doctorName}
+Patient: ${patientName}
+Date: ${appointmentDate}
+Time: ${appointmentTime}
+
+You can join the video visit using this link:
+${meetingUrl}
+
+Best regards,
+KneeKlinic Team`;
+
+    const html = text.replace(/\n/g, "<br/>");
+
+    await this.transporter.sendMail({
+      from: `"KneeKlinic" <${process.env.EMAIL_USER}>`,
+      to: targetEmail,
+      subject,
+      text,
+      html,
+    });
+  }
+
   // Send appointment cancellation notification
   async sendAppointmentCancelledEmail(options: { targetEmail: string; targetName: string; doctorName: string; patientName: string; appointmentDate: string; appointmentTime: string; type: "in-person" | "virtual" }): Promise<void> {
     if (!this.transporter || !this.isConfigured) {

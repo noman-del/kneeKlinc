@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Mail, Lock, Save, Eye, EyeOff, Camera, Upload, Trash2, Stethoscope, CheckCircle2, Circle } from "lucide-react";
@@ -95,6 +96,18 @@ export default function Profile() {
 
   const hasDoctorChanges = JSON.stringify(doctorProfile) !== JSON.stringify(originalDoctorProfile);
 
+  // Doctor availability state (for doctor profile)
+  const [availability, setAvailability] = useState({
+    availableStartTime: "09:00",
+    availableEndTime: "17:00",
+    slotDuration: "30",
+    availableDays: [] as number[],
+  });
+
+  const [originalAvailability, setOriginalAvailability] = useState(availability);
+
+  const hasAvailabilityChanges = availability.availableStartTime !== originalAvailability.availableStartTime || availability.availableEndTime !== originalAvailability.availableEndTime || availability.slotDuration !== originalAvailability.slotDuration || JSON.stringify(availability.availableDays) !== JSON.stringify(originalAvailability.availableDays);
+
   // Load doctor professional profile when doctor logs in
   useEffect(() => {
     if (!isDoctor) return;
@@ -136,6 +149,45 @@ export default function Profile() {
     loadDoctorProfile();
   }, [isDoctor]);
 
+  // Load doctor availability for profile page
+  useEffect(() => {
+    if (!isDoctor) return;
+
+    const loadAvailability = async () => {
+      try {
+        const res = await fetch("/api/doctors/my-availability", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const schedule: Array<{ dayOfWeek: number; startTime: string; endTime: string; slotDuration: number }> = data.schedule || [];
+
+        if (schedule.length === 0) {
+          // Keep defaults
+          return;
+        }
+
+        const days = schedule.map((s) => s.dayOfWeek);
+        const first = schedule[0];
+        const mapped = {
+          availableStartTime: first.startTime || "09:00",
+          availableEndTime: first.endTime || "17:00",
+          slotDuration: String(first.slotDuration || 30),
+          availableDays: days,
+        };
+
+        setAvailability(mapped);
+        setOriginalAvailability(mapped);
+      } catch (error) {
+        console.error("Failed to load doctor availability", error);
+      }
+    };
+
+    loadAvailability();
+  }, [isDoctor]);
+
   const handleDeleteProfilePicture = async () => {
     try {
       const response = await fetch("/api/auth/delete-profile-picture", {
@@ -165,6 +217,61 @@ export default function Profile() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete profile picture. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAvailabilityUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hasAvailabilityChanges) {
+      toast({ title: "No Changes", description: "No changes were made to availability.", variant: "destructive" });
+      return;
+    }
+
+    if (!availability.availableStartTime || !availability.availableEndTime) {
+      toast({ title: "Error", description: "Start time and end time are required.", variant: "destructive" });
+      return;
+    }
+
+    if (!availability.availableDays.length) {
+      toast({ title: "Error", description: "Select at least one available day.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const schedule = availability.availableDays.map((dayOfWeek) => ({
+        dayOfWeek,
+        startTime: availability.availableStartTime,
+        endTime: availability.availableEndTime,
+        slotDuration: parseInt(availability.slotDuration || "30", 10),
+      }));
+
+      const res = await fetch("/api/doctors/set-availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: JSON.stringify({ schedule }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update availability");
+      }
+
+      setOriginalAvailability(availability);
+
+      toast({
+        title: "Availability Updated",
+        description: "Your appointment days and time slots have been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update availability. Please try again.",
         variant: "destructive",
       });
     }
@@ -529,12 +636,20 @@ export default function Profile() {
                 </div>
               </button>
               {isDoctor && (
-                <button onClick={() => setActiveTab("practice")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "practice" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
-                  <div className="flex items-center justify-center space-x-2">
-                    <Stethoscope className="w-5 h-5" />
-                    <span>Professional Details</span>
-                  </div>
-                </button>
+                <>
+                  <button onClick={() => setActiveTab("practice")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "practice" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
+                    <div className="flex items-center justify-center space-x-2">
+                      <Stethoscope className="w-5 h-5" />
+                      <span>Professional Details</span>
+                    </div>
+                  </button>
+                  <button onClick={() => setActiveTab("availability")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "availability" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
+                    <div className="flex items-center justify-center space-x-2">
+                      <Stethoscope className="w-5 h-5" />
+                      <span>Availability</span>
+                    </div>
+                  </button>
+                </>
               )}
             </div>
 
@@ -566,6 +681,7 @@ export default function Profile() {
 
             {activeTab === "practice" && isDoctor && (
               <form onSubmit={handleDoctorProfileUpdate} className="space-y-6">
+                <h3 className="text-xl font-display font-semibold text-white mb-2">Professional Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-slate-200 font-medium">Title</Label>
@@ -662,6 +778,84 @@ export default function Profile() {
                 <Button type="submit" disabled={!hasDoctorChanges} className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
                   <Save className="w-4 h-4 mr-2" />
                   Update Professional Profile
+                </Button>
+              </form>
+            )}
+
+            {activeTab === "availability" && isDoctor && (
+              <form onSubmit={handleAvailabilityUpdate} className="space-y-6">
+                <h3 className="text-xl font-display font-semibold text-white mb-2">Availability Schedule</h3>
+                <p className="text-slate-400 text-sm mb-4">Update the days and time slots when you are available for patient appointments.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-slate-200 font-medium">
+                      Start Time <span className="text-red-400">*</span>
+                    </Label>
+                    <Input type="time" value={availability.availableStartTime} onChange={(e) => setAvailability({ ...availability, availableStartTime: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-200 font-medium">
+                      End Time <span className="text-red-400">*</span>
+                    </Label>
+                    <Input type="time" value={availability.availableEndTime} onChange={(e) => setAvailability({ ...availability, availableEndTime: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-200 font-medium">
+                      Appointment Duration (minutes) <span className="text-red-400">*</span>
+                    </Label>
+                    <select value={availability.slotDuration} onChange={(e) => setAvailability({ ...availability, slotDuration: e.target.value })} className="w-full rounded-md bg-slate-800/60 border border-slate-600/50 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400">
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">60 minutes</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-slate-200 font-medium">
+                    Available Days <span className="text-red-400">*</span>
+                  </Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { label: "Monday", value: 1 },
+                      { label: "Tuesday", value: 2 },
+                      { label: "Wednesday", value: 3 },
+                      { label: "Thursday", value: 4 },
+                      { label: "Friday", value: 5 },
+                      { label: "Saturday", value: 6 },
+                      { label: "Sunday", value: 0 },
+                    ].map((day) => (
+                      <div key={day.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={availability.availableDays.includes(day.value)}
+                          onCheckedChange={(checked) => {
+                            setAvailability((prev) => {
+                              const current = prev.availableDays;
+                              const exists = current.includes(day.value);
+                              let next: number[];
+                              if (checked && !exists) {
+                                next = [...current, day.value];
+                              } else if (!checked && exists) {
+                                next = current.filter((v) => v !== day.value);
+                              } else {
+                                next = current;
+                              }
+                              return { ...prev, availableDays: next };
+                            });
+                          }}
+                          className="border-white/40"
+                        />
+                        <span className="text-sm text-slate-100">{day.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={!hasAvailabilityChanges} className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                  <Save className="w-4 h-4 mr-2" />
+                  Update Availability
                 </Button>
               </form>
             )}
