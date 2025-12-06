@@ -501,9 +501,18 @@ export function registerAIRoutes(app: Express) {
 
       const validatedData = insertAppointmentSchema.parse(bookingData);
 
+      // Auto-generate meeting URL for virtual appointments using Jitsi
+      let meetingUrl: string | undefined;
+      if (validatedData.type === "virtual") {
+        const baseUrl = process.env.VIRTUAL_VISIT_BASE_URL || "https://meet.jit.si";
+        const roomName = `kneeklinic-${doctorUserId}-${patientUserId}-${Date.now()}`;
+        meetingUrl = `${baseUrl}/${roomName}`;
+      }
+
       const appointment = new Appointment({
         ...validatedData,
         appointmentDate: new Date(validatedData.appointmentDate),
+        meetingUrl,
       });
 
       await appointment.save();
@@ -529,6 +538,73 @@ export function registerAIRoutes(app: Express) {
         }
       })();
 
+      // Schedule reminder emails for virtual visits ~N minutes before start (server best-effort)
+      if (appointment.type === "virtual" && appointment.meetingUrl) {
+        const joinLeadMinutes = parseInt(process.env.VIRTUAL_VISIT_JOIN_LEAD_MINUTES || "15", 10);
+        const reminderMinutes = parseInt(process.env.VIRTUAL_VISIT_REMINDER_MINUTES || "5", 10);
+
+        const appointmentStart = new Date(appointment.appointmentDate);
+        const [timePart, period] = (appointment.appointmentTime || "00:00").split(" ");
+        const [hStr, mStr] = (timePart || "00:00").split(":");
+        let hours = parseInt(hStr || "0", 10);
+        const minutes = parseInt(mStr || "0", 10);
+        if (period === "PM" && hours !== 12) hours += 12;
+        if (period === "AM" && hours === 12) hours = 0;
+        appointmentStart.setHours(hours, minutes, 0, 0);
+
+        const reminderTime = new Date(appointmentStart.getTime() - reminderMinutes * 60 * 1000);
+        const delayMs = reminderTime.getTime() - Date.now();
+
+        if (delayMs > 0 && delayMs < 24 * 60 * 60 * 1000) {
+          setTimeout(async () => {
+            try {
+              const { Patient, Doctor } = await import("@shared/schema");
+              const doctor = await Doctor.findById(appointment.doctorId);
+              const patient = await Patient.findById(appointment.patientId).populate("userId");
+
+              const doctorNameParts = doctor ? [doctor.title, doctor.firstName, doctor.lastName].filter(Boolean) : [];
+              const doctorName = doctorNameParts.join(" ") || "Doctor";
+
+              const patientUser: any = patient?.userId || null;
+              const patientName = patientUser ? `${patientUser.firstName || ""} ${patientUser.lastName || ""}`.trim() || "Patient" : "Patient";
+              const patientEmail = patientUser?.email;
+              const doctorEmail = doctor?.email;
+              const dateStr = appointment.appointmentDate.toISOString().split("T")[0];
+
+              if (doctorEmail) {
+                emailService
+                  .sendVirtualVisitReminderEmail({
+                    targetEmail: doctorEmail,
+                    targetName: doctorName,
+                    doctorName,
+                    patientName,
+                    appointmentDate: dateStr,
+                    appointmentTime: appointment.appointmentTime,
+                    meetingUrl: appointment.meetingUrl!,
+                  })
+                  .catch((err: unknown) => console.error("Failed to send virtual visit reminder to doctor:", err));
+              }
+
+              if (patientEmail) {
+                emailService
+                  .sendVirtualVisitReminderEmail({
+                    targetEmail: patientEmail,
+                    targetName: patientName,
+                    doctorName,
+                    patientName,
+                    appointmentDate: dateStr,
+                    appointmentTime: appointment.appointmentTime,
+                    meetingUrl: appointment.meetingUrl!,
+                  })
+                  .catch((err: unknown) => console.error("Failed to send virtual visit reminder to patient:", err));
+              }
+            } catch (reminderError) {
+              console.error("Error while sending virtual visit reminder:", reminderError);
+            }
+          }, delayMs);
+        }
+      }
+
       res.status(201).json({
         message: "Appointment booked successfully",
         appointment: {
@@ -538,6 +614,7 @@ export function registerAIRoutes(app: Express) {
           appointmentTime: appointment.appointmentTime,
           type: appointment.type,
           status: appointment.status,
+          meetingUrl: appointment.meetingUrl,
         },
       });
     } catch (error) {
@@ -575,6 +652,8 @@ export function registerAIRoutes(app: Express) {
         }
         appointments = await Appointment.find({ doctorId: doctorProfile._id }).sort({ appointmentDate: 1 });
       }
+
+      const joinLeadMinutes = parseInt(process.env.VIRTUAL_VISIT_JOIN_LEAD_MINUTES || "15", 10);
 
       res.json({
         appointments: await Promise.all(
@@ -623,6 +702,30 @@ export function registerAIRoutes(app: Express) {
               }
             }
 
+            // Compute whether this virtual appointment is currently joinable based on env-configured lead time
+            let canJoinVideoVisit = false;
+            if (a.type === "virtual" && a.meetingUrl && (a.status === "scheduled" || a.status === "confirmed")) {
+              const start = new Date(a.appointmentDate);
+              if (a.appointmentTime) {
+                const [timePart, period] = (a.appointmentTime || "00:00").split(" ");
+                const [hStr, mStr] = (timePart || "00:00").split(":");
+                let hours = parseInt(hStr || "0", 10);
+                const minutes = parseInt(mStr || "0", 10);
+                if (period === "PM" && hours !== 12) hours += 12;
+                if (period === "AM" && hours === 12) hours = 0;
+                start.setHours(hours, minutes, 0, 0);
+              }
+
+              const durationMinutes = typeof a.duration === "number" && !isNaN(a.duration) ? a.duration : 30;
+              const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+              const now = new Date();
+              const msUntilStart = start.getTime() - now.getTime();
+              const minutesUntilStart = msUntilStart / (60 * 1000);
+
+              canJoinVideoVisit = minutesUntilStart <= joinLeadMinutes && end > now;
+            }
+
             return {
               id: a._id,
               patientId: a.patientId,
@@ -634,6 +737,8 @@ export function registerAIRoutes(app: Express) {
               status: a.status,
               reason: a.reason,
               notes: a.notes,
+              meetingUrl: a.meetingUrl,
+              canJoinVideoVisit,
               aiAnalysisId: a.aiAnalysisId,
               createdAt: a.createdAt,
               ...doctorMeta,
@@ -1096,6 +1201,31 @@ export function registerAIRoutes(app: Express) {
     } catch (error) {
       console.error("Set availability error:", error);
       res.status(500).json({ message: "Failed to set availability" });
+    }
+  });
+
+  /**
+   * GET /api/doctors/my-availability
+   * Get the authenticated doctor's weekly availability schedule
+   */
+  app.get("/api/doctors/my-availability", authenticateToken, authorizeRole("doctor"), async (req: AuthRequest, res) => {
+    try {
+      const doctorId = req.user!.id;
+      const { DoctorAvailability } = await import("@shared/additional-schema");
+
+      const availability = await DoctorAvailability.find({ doctorId, isActive: true }).sort({ dayOfWeek: 1 }).lean();
+
+      const schedule = availability.map((slot: any) => ({
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        slotDuration: slot.slotDuration,
+      }));
+
+      res.json({ schedule });
+    } catch (error) {
+      console.error("Get my availability error:", error);
+      res.status(500).json({ message: "Failed to fetch availability" });
     }
   });
 

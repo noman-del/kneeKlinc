@@ -17,6 +17,8 @@ interface Appointment {
   reason?: string;
   notes?: string;
   createdAt: string;
+  meetingUrl?: string;
+  canJoinVideoVisit?: boolean;
   // Optional meta from API to ensure proper doctor name/details on patient view
   doctorName?: string;
   doctorSpecialization?: string;
@@ -126,6 +128,13 @@ export default function Appointments() {
     if (user.userType === "patient") {
       fetchDoctors();
     }
+
+    // Poll appointments periodically so backend-driven canJoinVideoVisit updates without manual reload
+    const interval = setInterval(() => {
+      fetchAppointments();
+    }, 30000); // every 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch available slots when doctor or date changes
@@ -620,6 +629,21 @@ export default function Appointments() {
                     </div>
                     {apt.reason && <p className="text-slate-400 text-sm mt-2 italic">Reason: {apt.reason}</p>}
                     <div className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${getStatusColor(apt.status)}`}>{apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}</div>
+                    {apt.type === "virtual" && apt.status === "confirmed" && apt.meetingUrl && (
+                      <Button
+                        size="sm"
+                        disabled={!apt.canJoinVideoVisit}
+                        onClick={() => {
+                          if (apt.meetingUrl) {
+                            window.open(apt.meetingUrl, "_blank", "noopener,noreferrer");
+                          }
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 w-full mt-4 disabled:bg-slate-700 disabled:text-slate-400"
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        Join Meeting
+                      </Button>
+                    )}
                     {/* Message Button - Always visible for scheduled/confirmed appointments */}
                     {(apt.status === "scheduled" || apt.status === "confirmed") && (
                       <Button size="sm" onClick={() => openMessage(apt)} className="bg-blue-600 hover:bg-blue-700 w-full mt-4">
