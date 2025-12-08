@@ -156,10 +156,10 @@ function Admin() {
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950/95">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <p className="text-xs font-semibold tracking-wider text-emerald-400 uppercase mb-1">Admin Dashboard</p>
-          <h1 className="text-3xl font-bold text-white mb-1">Platform Operations</h1>
+          <p className="text-xs font-semibold tracking-wider text-emerald-400 uppercase mb-1">Administration</p>
+          <h1 className="text-3xl font-bold text-white mb-1">Clinical Operations Console</h1>
           <p className="text-sm text-slate-300">
-            Signed in as <span className="font-semibold">{user?.firstName || "System"}</span>. Use this console to monitor key metrics and manage users, doctors, patients and appointments across the platform.
+            You are signed in as <span className="font-semibold">{user?.firstName || user?.lastName ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() : user?.email || "Administrator"}</span>. Use this console to monitor activity and centrally manage doctors, patients and appointments across the KneeKlinic platform.
           </p>
         </div>
 
