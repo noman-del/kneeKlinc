@@ -7,7 +7,7 @@ interface User {
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
-  userType: "doctor" | "patient";
+  userType: "doctor" | "patient" | "admin";
   isEmailVerified: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -35,6 +35,27 @@ export function useAuth() {
       });
 
       if (!response.ok) {
+        // If backend says 403, user is likely suspended – clear auth and surface message
+        if (response.status === 403) {
+          let message = "Your account has been suspended.";
+          try {
+            const body = await response.json();
+            if (body?.message) message = body.message;
+          } catch {
+            // ignore JSON parse errors
+          }
+
+          // Clear stored auth so the app treats them as logged out
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
+          // Stash suspension message for the login page to display
+          localStorage.setItem("suspension_message", message);
+
+          throw new Error("SUSPENDED");
+        }
+
         throw new Error("Failed to fetch user");
       }
 

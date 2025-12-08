@@ -27,9 +27,10 @@ import Appointments from "@/pages/appointments";
 import Progress from "@/pages/progress";
 import Community from "@/pages/community";
 import NotFound from "@/pages/not-found";
+import Admin from "@/pages/admin";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -42,7 +43,7 @@ function Router() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <FloatingChatButton />
+      {isAuthenticated && user?.userType !== "admin" && <FloatingChatButton />}
       <main className="flex-1">
         <RegistrationGuard>
           <Switch>
@@ -73,8 +74,8 @@ function Router() {
             <Route path="/features" component={Features} />
             <Route path="/contact" component={Contact} />
 
-            {/* Landing page - accessible to all */}
-            <Route path="/">{isAuthenticated ? <Home /> : <Landing />}</Route>
+            {/* Landing / root route */}
+            <Route path="/">{isAuthenticated ? user?.userType === "admin" ? <Admin /> : <Home /> : <Landing />}</Route>
 
             {/* Protected routes */}
             <Route path="/home">
@@ -128,6 +129,12 @@ function Router() {
             <Route path="/progress">
               <ProtectedRoute>
                 <Progress />
+              </ProtectedRoute>
+            </Route>
+
+            <Route path="/admin">
+              <ProtectedRoute requiredRole="admin">
+                <Admin />
               </ProtectedRoute>
             </Route>
 

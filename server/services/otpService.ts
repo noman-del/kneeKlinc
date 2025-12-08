@@ -13,7 +13,7 @@ export class OTPService {
   }
 
   // Create and send OTP for signup
-  async createAndSendOTP(email: string, password: string, firstName: string, lastName: string, userType: "doctor" | "patient"): Promise<{ success: boolean; message: string }> {
+  async createAndSendOTP(email: string, password: string, firstName: string, lastName: string, userType: "doctor" | "patient" | "admin"): Promise<{ success: boolean; message: string }> {
     try {
       // Generate OTP
       const otp = this.generateOTP();
@@ -81,7 +81,7 @@ export class OTPService {
       password: string;
       firstName: string;
       lastName: string;
-      userType: "doctor" | "patient";
+      userType: "doctor" | "patient" | "admin";
     };
   }> {
     try {

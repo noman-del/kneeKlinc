@@ -60,27 +60,33 @@ export function Header() {
             ) : (
               <>
                 <div className="flex items-center space-x-6">
-                  <button onClick={() => setLocation("/about")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
-                    <span className="relative z-10">About</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
-                  </button>
-                  <button onClick={() => setLocation("/features")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
-                    <span className="relative z-10">Features</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
-                  </button>
-                  <button onClick={() => setLocation("/contact")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
-                    <span className="relative z-10">Contact</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
-                  </button>
-                  <button onClick={() => setLocation("/community")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
-                    <span className="relative z-10">Community</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
-                  </button>
+                  {/* For non-admin users, show full navigation */}
+                  {user?.userType !== "admin" && (
+                    <>
+                      <button onClick={() => setLocation("/about")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
+                        <span className="relative z-10">About</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
+                      </button>
+                      <button onClick={() => setLocation("/features")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
+                        <span className="relative z-10">Features</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
+                      </button>
+                      <button onClick={() => setLocation("/contact")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
+                        <span className="relative z-10">Contact</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
+                      </button>
+                      <button onClick={() => setLocation("/community")} className="relative px-4 py-2 text-slate-300 hover:text-white transition-all duration-300 group hidden md:block">
+                        <span className="relative z-10">Community</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-600/20 to-emerald-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-emerald-400 group-hover:w-full group-hover:left-0 transition-all duration-300"></div>
+                      </button>
+                    </>
+                  )}
 
+                  {/* Profile dropdown - always shown for authenticated users, including admin */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center space-x-3 px-4 py-2 text-slate-300 hover:text-white border border-white/20 hover:border-emerald-400/40 backdrop-blur-sm transition-all duration-300 group overflow-hidden rounded-xl">
@@ -106,14 +112,19 @@ export function Header() {
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-slate-600/50" />
-                      <DropdownMenuItem onClick={() => setLocation("/profile")} className="text-slate-300 hover:text-white hover:bg-slate-700/50 focus:bg-slate-700/50 transition-colors duration-200 mx-2 rounded-lg cursor-pointer">
-                        <User className="mr-3 h-4 w-4 text-emerald-400" />
-                        <span className="font-medium">Profile</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-slate-600/50 mx-2" />
+                      {/* For non-admin users, show Profile + Logout; for admin, only Logout */}
+                      {user?.userType !== "admin" && (
+                        <>
+                          <DropdownMenuItem onClick={() => setLocation("/profile")} className="text-slate-300 hover:text-white hover:bg-slate-700/50 focus:bg-slate-700/50 transition-colors duration-200 mx-2 rounded-lg cursor-pointer">
+                            <User className="mr-3 h-4 w-4 text-emerald-400" />
+                            <span className="font-medium">Profile</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-slate-600/50 mx-2" />
+                        </>
+                      )}
                       <DropdownMenuItem onClick={logout} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 transition-colors duration-200 mx-2 rounded-lg cursor-pointer">
                         <LogOut className="mr-3 h-4 w-4" />
-                        <span className="font-medium">Sign Out</span>
+                        <span className="font-medium">Logout</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -8,12 +8,12 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    userType: "doctor" | "patient";
+    userType: "doctor" | "patient" | "admin";
   };
 }
 
 // Generate JWT token
-export const generateToken = (userId: string, email: string, userType: "doctor" | "patient"): string => {
+export const generateToken = (userId: string, email: string, userType: "doctor" | "patient" | "admin"): string => {
   const secret: Secret = process.env.JWT_SECRET ?? "fallback-secret";
   const defaultExpiresIn = "1d" as const;
   const expiresIn: SignOptions["expiresIn"] = (process.env.JWT_EXPIRES_IN ?? defaultExpiresIn) as SignOptions["expiresIn"];
@@ -51,6 +51,11 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       return res.status(401).json({ message: "User no longer exists" });
     }
 
+    // Block suspended users on all authenticated routes
+    if (user.isSuspended) {
+      return res.status(403).json({ message: "Your account has been suspended. Please contact support." });
+    }
+
     req.user = {
       id: decoded.id,
       email: decoded.email,
@@ -64,7 +69,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 };
 
 // Role-based authorization middleware
-export const authorizeRole = (...roles: ("doctor" | "patient")[]) => {
+export const authorizeRole = (...roles: ("doctor" | "patient" | "admin")[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
@@ -89,7 +94,8 @@ export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFu
       const decoded = jwt.verify(token, secret) as any;
       const user = await User.findById(decoded.id);
 
-      if (user) {
+      // Only attach non-suspended users to the request context
+      if (user && !user.isSuspended) {
         req.user = {
           id: decoded.id,
           email: decoded.email,

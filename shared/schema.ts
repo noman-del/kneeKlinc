@@ -8,8 +8,9 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   profileImageUrl?: string;
-  userType: "doctor" | "patient";
+  userType: "doctor" | "patient" | "admin";
   isEmailVerified: boolean;
+  isSuspended?: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -84,13 +85,13 @@ export interface IPatientInjuries extends Document {
 export interface IOTPVerification extends Document {
   email: string;
   otp: string;
-  userType: "doctor" | "patient";
+  userType: "doctor" | "patient" | "admin";
   userData: {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
-    userType: "doctor" | "patient";
+    userType: "doctor" | "patient" | "admin";
   };
   expiresAt: Date;
   verified: boolean;
@@ -113,8 +114,9 @@ const userSchema = new Schema<IUser>(
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
     profileImageUrl: String,
-    userType: { type: String, required: true, enum: ["doctor", "patient"] },
+    userType: { type: String, required: true, enum: ["doctor", "patient", "admin"] },
     isEmailVerified: { type: Boolean, default: false },
+    isSuspended: { type: Boolean, default: false },
     lastLoginAt: Date,
   },
   {
@@ -211,13 +213,13 @@ const otpVerificationSchema = new Schema<IOTPVerification>(
   {
     email: { type: String, required: true, lowercase: true, trim: true },
     otp: { type: String, required: true },
-    userType: { type: String, required: true, enum: ["doctor", "patient"] },
+    userType: { type: String, required: true, enum: ["doctor", "patient", "admin"] },
     userData: {
       email: { type: String, required: true },
       password: { type: String, required: true },
       firstName: { type: String, required: true },
       lastName: { type: String, required: true },
-      userType: { type: String, required: true, enum: ["doctor", "patient"] },
+      userType: { type: String, required: true, enum: ["doctor", "patient", "admin"] },
     },
     expiresAt: { type: Date, required: true, index: true },
     verified: { type: Boolean, default: false },

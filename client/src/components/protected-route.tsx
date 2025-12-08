@@ -5,27 +5,29 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'doctor' | 'patient';
+  requiredRole?: "doctor" | "patient" | "admin";
   redirectTo?: string;
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRole, 
-  redirectTo = "/login" 
-}: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole, redirectTo = "/login" }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       setLocation(redirectTo);
-    } else if (!isLoading && isAuthenticated && requiredRole && user?.userType !== requiredRole) {
-      // Redirect to appropriate page based on user type
-      if (user?.userType === 'doctor') {
-        setLocation('/doctor-dashboard');
-      } else {
-        setLocation('/patient-dashboard');
+    } else if (!isLoading && isAuthenticated) {
+      // If this route requires a specific role and user doesn't match, redirect them
+      if (requiredRole && user?.userType !== requiredRole) {
+        if (user?.userType === "admin") {
+          setLocation("/admin");
+        } else {
+          setLocation("/home");
+        }
+      }
+      // If no specific role is required but user is admin, always send them to admin portal
+      else if (!requiredRole && user?.userType === "admin" && redirectTo !== "/admin") {
+        setLocation("/admin");
       }
     }
   }, [isLoading, isAuthenticated, user, requiredRole, redirectTo, setLocation]);
@@ -45,7 +47,9 @@ export function ProtectedRoute({
     return null; // Will redirect in useEffect
   }
 
-  if (requiredRole && user?.userType !== requiredRole) {
+  // If route requires a specific role and user doesn't match, or user is admin on a generic protected route,
+  // don't render children (navigation handled in useEffect)
+  if ((requiredRole && user?.userType !== requiredRole) || (!requiredRole && user?.userType === "admin")) {
     return null; // Will redirect in useEffect
   }
 
@@ -53,13 +57,7 @@ export function ProtectedRoute({
 }
 
 // Public route component (only accessible when not authenticated)
-export function PublicRoute({ 
-  children, 
-  redirectTo = "/" 
-}: { 
-  children: React.ReactNode; 
-  redirectTo?: string; 
-}) {
+export function PublicRoute({ children, redirectTo = "/" }: { children: React.ReactNode; redirectTo?: string }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 

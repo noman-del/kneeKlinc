@@ -414,7 +414,7 @@ This is an automated confirmation email. Please do not reply to this message.
   }
 
   // Send OTP verification email
-  async sendOTPEmail(email: string, otp: string, firstName: string, userType: "doctor" | "patient"): Promise<{ success: boolean; message: string }> {
+  async sendOTPEmail(email: string, otp: string, firstName: string, userType: "doctor" | "patient" | "admin"): Promise<{ success: boolean; message: string }> {
     if (!this.transporter || !this.isConfigured) {
       return {
         success: false,
@@ -428,7 +428,7 @@ This is an automated confirmation email. Please do not reply to this message.
       const otpEmailHtml = await ejs.renderFile(path.join(templatesDir, "otp-email.ejs"), {
         firstName,
         otp,
-        userType: userType === "doctor" ? "Doctor" : "Patient",
+        userType: userType === "doctor" ? "Doctor" : userType === "patient" ? "Patient" : "Admin",
         expiryMinutes: 10,
       });
 
@@ -457,11 +457,11 @@ This is an automated confirmation email. Please do not reply to this message.
     }
   }
 
-  private generatePlainTextOTP(firstName: string, otp: string, userType: "doctor" | "patient"): string {
+  private generatePlainTextOTP(firstName: string, otp: string, userType: "doctor" | "patient" | "admin"): string {
     return `
 Hi ${firstName}!
 
-Welcome to KneeKlinic! Thank you for registering as a ${userType === "doctor" ? "Doctor" : "Patient"}.
+Welcome to KneeKlinic! Thank you for registering as a ${userType === "doctor" ? "Doctor" : userType === "patient" ? "Patient" : "Admin"}.
 
 Your One-Time Password (OTP) for email verification is:
 

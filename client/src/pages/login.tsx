@@ -23,8 +23,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
-  // Check for signup success message
+  // Check for signup success message and suspension message
   useEffect(() => {
+    // From successful signup
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("signup") === "success") {
       toast({
@@ -33,6 +34,17 @@ export default function Login() {
       });
       // Clean up the URL
       window.history.replaceState({}, "", "/login");
+    }
+
+    // From suspended account (set by useAuth when /api/auth/user returns 403)
+    const suspensionMessage = localStorage.getItem("suspension_message");
+    if (suspensionMessage) {
+      toast({
+        title: "Account Suspended",
+        description: suspensionMessage,
+        variant: "destructive",
+      });
+      localStorage.removeItem("suspension_message");
     }
   }, [toast]);
 

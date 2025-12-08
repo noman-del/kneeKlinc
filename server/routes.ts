@@ -10,6 +10,7 @@ import path from "path";
 import fs from "fs";
 import { registerAIRoutes } from "./routes-ai";
 import { otpService } from "./services/otpService";
+import { Appointment } from "@shared/additional-schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register AI, Messaging, and Appointment routes
@@ -170,6 +171,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await User.findOne({ email: validatedData.email });
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Block suspended users
+      if (user.isSuspended) {
+        return res.status(403).json({ message: "Your account has been suspended. Please contact support." });
       }
 
       // Check password
@@ -354,6 +360,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // In a JWT system, logout is handled client-side by removing the token
     // But we can track logout on server side if needed
     res.json({ message: "Logged out successfully", authenticated: false });
+  });
+
+  // Simple admin-only route
+  app.get("/api/admin/overview", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    res.json({
+      message: "Admin access granted",
+      user: req.user,
+    });
+  });
+
+  // ==================== ADMIN MANAGEMENT ROUTES ====================
+
+  // List users with optional filters
+  app.get("/api/admin/users", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { role, suspended } = req.query as { role?: string; suspended?: string };
+
+      const query: any = {};
+      if (role && ["doctor", "patient", "admin"].includes(role)) {
+        // Explicit role filter (including admin if requested)
+        query.userType = role;
+      } else {
+        // By default, exclude admin users from the users list
+        query.userType = { $in: ["doctor", "patient"] };
+      }
+      if (typeof suspended === "string") {
+        if (suspended === "true") query.isSuspended = true;
+        if (suspended === "false") query.isSuspended = { $ne: true };
+      }
+
+      const users = await User.find(query).select("-password").sort({ createdAt: -1 });
+      res.json({ users });
+    } catch (error) {
+      console.error("Admin list users error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Suspend user
+  app.post("/api/admin/users/:id/suspend", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      user.isSuspended = true;
+      await user.save();
+
+      const userResponse = user.toObject();
+      delete (userResponse as any).password;
+
+      res.json({ message: "User suspended successfully", user: userResponse });
+    } catch (error) {
+      console.error("Admin suspend user error:", error);
+      res.status(500).json({ message: "Failed to suspend user" });
+    }
+  });
+
+  // Unsuspend user
+  app.post("/api/admin/users/:id/unsuspend", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      user.isSuspended = false;
+      await user.save();
+
+      const userResponse = user.toObject();
+      delete (userResponse as any).password;
+
+      res.json({ message: "User unsuspended successfully", user: userResponse });
+    } catch (error) {
+      console.error("Admin unsuspend user error:", error);
+      res.status(500).json({ message: "Failed to unsuspend user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/admin/users/:id", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findByIdAndDelete(id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Also clean up any linked doctor/patient profiles for this user
+      try {
+        const { Doctor, Patient } = await import("@shared/schema");
+        await Promise.all([Doctor.deleteMany({ userId: id }), Patient.deleteMany({ userId: id })]);
+      } catch (cleanupError) {
+        console.error("Error cleaning up linked doctor/patient profiles for deleted user:", cleanupError);
+      }
+
+      res.json({ message: "User and linked profiles deleted successfully" });
+    } catch (error) {
+      console.error("Admin delete user error:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // List doctors (with linked user details)
+  app.get("/api/admin/doctors", authenticateToken, authorizeRole("admin"), async (_req: AuthRequest, res) => {
+    try {
+      const { Doctor } = await import("@shared/schema");
+      const doctors = await Doctor.find().populate("userId").sort({ createdAt: -1 });
+      res.json({ doctors });
+    } catch (error) {
+      console.error("Admin list doctors error:", error);
+      res.status(500).json({ message: "Failed to fetch doctors" });
+    }
+  });
+
+  // Verify / unverify doctor
+  app.post("/api/admin/doctors/:id/verify", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { isVerified } = req.body as { isVerified?: boolean };
+      const { Doctor } = await import("@shared/schema");
+
+      const doctor = await Doctor.findById(id);
+      if (!doctor) {
+        return res.status(404).json({ message: "Doctor not found" });
+      }
+
+      doctor.isVerified = isVerified === undefined ? true : !!isVerified;
+      await doctor.save();
+
+      res.json({ message: "Doctor verification status updated", doctor });
+    } catch (error) {
+      console.error("Admin verify doctor error:", error);
+      res.status(500).json({ message: "Failed to update doctor" });
+    }
+  });
+
+  // List patients (all user accounts with userType = "patient")
+  app.get("/api/admin/patients", authenticateToken, authorizeRole("admin"), async (_req: AuthRequest, res) => {
+    try {
+      const patients = await User.find({ userType: "patient" }).select("-password").sort({ createdAt: -1 });
+      res.json({ patients });
+    } catch (error) {
+      console.error("Admin list patients error:", error);
+      res.status(500).json({ message: "Failed to fetch patients" });
+    }
+  });
+
+  // List appointments (with doctor and patient + linked user details)
+  app.get("/api/admin/appointments", authenticateToken, authorizeRole("admin"), async (_req: AuthRequest, res) => {
+    try {
+      const appointments = await Appointment.find()
+        .populate("doctorId")
+        .populate({ path: "patientId", populate: { path: "userId" } })
+        .sort({ appointmentDate: -1 });
+
+      res.json({ appointments });
+    } catch (error) {
+      console.error("Admin list appointments error:", error);
+      res.status(500).json({ message: "Failed to fetch appointments" });
+    }
+  });
+
+  // Update appointment status (e.g., cancel, complete)
+  app.post("/api/admin/appointments/:id/status", authenticateToken, authorizeRole("admin"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body as { status: "scheduled" | "confirmed" | "completed" | "cancelled" };
+
+      const appointment = await Appointment.findById(id);
+      if (!appointment) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      appointment.status = status;
+      await appointment.save();
+
+      res.json({ message: "Appointment status updated", appointment });
+    } catch (error) {
+      console.error("Admin update appointment status error:", error);
+      res.status(500).json({ message: "Failed to update appointment" });
+    }
+  });
+
+  // Admin stats
+  app.get("/api/admin/stats", authenticateToken, authorizeRole("admin"), async (_req: AuthRequest, res) => {
+    try {
+      const [totalUsers, totalDoctors, totalPatients, totalAdmins, totalAppointments, statusCounts] = await Promise.all([
+        // Only count non-admin users in totalUsers
+        User.countDocuments({ userType: { $in: ["doctor", "patient"] } }),
+        User.countDocuments({ userType: "doctor" }),
+        User.countDocuments({ userType: "patient" }),
+        User.countDocuments({ userType: "admin" }),
+        Appointment.countDocuments(),
+        Appointment.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      ]);
+
+      const appointmentsByStatus: Record<string, number> = {};
+      for (const row of statusCounts as any[]) {
+        appointmentsByStatus[row._id] = row.count;
+      }
+
+      res.json({
+        totalUsers,
+        totalDoctors,
+        totalPatients,
+        totalAdmins,
+        totalAppointments,
+        appointmentsByStatus,
+      });
+    } catch (error) {
+      console.error("Admin stats error:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
   });
 
   // Contact form route
