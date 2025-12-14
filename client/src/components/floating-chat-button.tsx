@@ -37,7 +37,7 @@ export function FloatingChatButton() {
     return () => clearInterval(interval);
   }, []);
 
-  const hiddenPaths = ["/login", "/signup", "/signup/patient", "/signup/doctor", "/doctor-registration", "/patient-registration"];
+  const hiddenPaths = ["/login", "/signup", "/signup/patient", "/signup/doctor", "/doctor-registration", "/patient-registration", "/messages"];
 
   if (!isAuthenticated || hiddenPaths.includes(location)) return null;
 

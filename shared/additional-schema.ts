@@ -48,6 +48,9 @@ export interface IMessage extends Document {
   subject?: string;
   message: string;
   aiAnalysisId?: mongoose.Types.ObjectId; // Reference to shared AI analysis
+  attachmentUrl?: string; // optional media attachment URL
+  attachmentType?: string; // e.g. "image"
+  attachmentOriginalName?: string; // original filename
   isRead: boolean;
   readAt?: Date;
   createdAt: Date;
@@ -61,8 +64,11 @@ const messageSchema = new Schema<IMessage>(
     senderType: { type: String, required: true, enum: ["doctor", "patient"] },
     receiverType: { type: String, required: true, enum: ["doctor", "patient"] },
     subject: String,
-    message: { type: String, required: true },
+    message: { type: String },
     aiAnalysisId: { type: Schema.Types.ObjectId, ref: "AIAnalysis" },
+    attachmentUrl: { type: String },
+    attachmentType: { type: String },
+    attachmentOriginalName: { type: String },
     isRead: { type: Boolean, default: false },
     readAt: Date,
   },
@@ -293,8 +299,11 @@ export const insertMessageSchema = z.object({
   senderType: z.enum(["doctor", "patient"]),
   receiverType: z.enum(["doctor", "patient"]),
   subject: z.string().optional(),
-  message: z.string().min(1),
+  message: z.string().optional(),
   aiAnalysisId: z.string().optional(),
+  attachmentUrl: z.string().optional(),
+  attachmentType: z.string().optional(),
+  attachmentOriginalName: z.string().optional(),
 });
 
 export const insertAppointmentSchema = z.object({

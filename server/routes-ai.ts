@@ -34,6 +34,36 @@ const uploadXray = multer({
   },
 }).single("xray");
 
+// Configure multer for chat image attachments
+const chatAttachmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "chat");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `chat-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+const uploadChatAttachment = multer({
+  storage: chatAttachmentStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedMime = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExt = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".jfif"];
+
+    if (!allowedMime.includes(file.mimetype) || !allowedExt.includes(ext)) {
+      return cb(new Error("Only image files (JPG, JPEG, PNG, GIF, WEBP, JFIF) are allowed"));
+    }
+    cb(null, true);
+  },
+}).single("file");
+
 export function registerAIRoutes(app: Express) {
   // ==================== AI ANALYSIS ROUTES ====================
 
@@ -171,6 +201,32 @@ export function registerAIRoutes(app: Express) {
       }
     }
   );
+
+  // ==================== CHAT ATTACHMENT ROUTES ====================
+
+  /**
+   * POST /api/messages/attachments
+   * Upload an image attachment for chat messages
+   */
+  app.post("/api/messages/attachments", authenticateToken, (req: AuthRequest, res) => {
+    uploadChatAttachment(req, res, (err) => {
+      if (err) {
+        console.error("Chat attachment upload error:", err);
+        return res.status(400).json({ message: err.message || "Failed to upload attachment" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No attachment provided" });
+      }
+
+      const attachmentUrl = `/uploads/chat/${req.file.filename}`;
+
+      res.status(201).json({
+        attachmentUrl,
+        originalName: req.file.originalname,
+      });
+    });
+  });
 
   /**
    * GET /api/patient/recommendations
@@ -392,6 +448,14 @@ export function registerAIRoutes(app: Express) {
 
       const validatedData = insertMessageSchema.parse(payload);
 
+      // Require either text or attachment (or both)
+      const hasText = typeof validatedData.message === "string" && validatedData.message.trim().length > 0;
+      const hasAttachment = typeof validatedData.attachmentUrl === "string" && validatedData.attachmentUrl.trim().length > 0;
+
+      if (!hasText && !hasAttachment) {
+        return res.status(400).json({ message: "Message text or an attachment is required" });
+      }
+
       const message = new Message({
         ...validatedData,
       });
@@ -433,6 +497,9 @@ export function registerAIRoutes(app: Express) {
           message: m.message,
           isRead: m.isRead,
           aiAnalysisId: m.aiAnalysisId,
+          attachmentUrl: m.attachmentUrl,
+          attachmentType: m.attachmentType,
+          attachmentOriginalName: m.attachmentOriginalName,
           createdAt: m.createdAt,
         })),
       });
@@ -459,6 +526,9 @@ export function registerAIRoutes(app: Express) {
           message: m.message,
           isRead: m.isRead,
           aiAnalysisId: m.aiAnalysisId,
+          attachmentUrl: m.attachmentUrl,
+          attachmentType: m.attachmentType,
+          attachmentOriginalName: m.attachmentOriginalName,
           createdAt: m.createdAt,
         })),
       });
@@ -591,6 +661,9 @@ export function registerAIRoutes(app: Express) {
         senderId: m.senderId,
         receiverId: m.receiverId,
         message: m.message,
+        attachmentUrl: m.attachmentUrl,
+        attachmentType: m.attachmentType,
+        attachmentOriginalName: m.attachmentOriginalName,
         createdAt: m.createdAt,
         isRead: m.isRead,
         isMine: m.senderId.toString() === currentUserId.toString(),

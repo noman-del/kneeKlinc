@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Send, User, ArrowLeft, Image as ImageIcon, FileText } from "lucide-react";
+import { Send, User, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
 
 interface Conversation {
   userId: string;
@@ -26,6 +26,9 @@ interface ChatMessage {
   createdAt: string;
   isRead: boolean;
   isMine: boolean;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentOriginalName?: string;
 }
 
 export default function Messages() {
@@ -37,6 +40,10 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentUserId, setCurrentUserId] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Initial load + poll conversations list
   useEffect(() => {
@@ -86,6 +93,50 @@ export default function Messages() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAttachmentError(null);
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(file.type)) {
+      setAttachmentError("Only image files (JPG, PNG, GIF, WEBP) are allowed.");
+      setSelectedFile(null);
+      setAttachmentPreviewUrl(null);
+      return;
+    }
+
+    if (file.size > maxSize) {
+      setAttachmentError("Image is too large. Maximum size is 10MB.");
+      setSelectedFile(null);
+      setAttachmentPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setAttachmentPreviewUrl(objectUrl);
+  };
+
+  const clearAttachment = () => {
+    if (attachmentPreviewUrl) {
+      URL.revokeObjectURL(attachmentPreviewUrl);
+    }
+    setSelectedFile(null);
+    setAttachmentPreviewUrl(null);
+    setAttachmentError(null);
   };
 
   const fetchUserDetails = async (userId: string) => {
@@ -149,11 +200,42 @@ export default function Messages() {
   };
 
   const sendMessage = async () => {
-    if (!messageInput.trim() || !activeConversation) return;
+    if (!activeConversation) return;
+
+    if (!messageInput.trim() && !selectedFile) return;
 
     try {
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+      let attachmentPayload: { attachmentUrl?: string; attachmentType?: string; attachmentOriginalName?: string } = {};
+
+      if (selectedFile) {
+        // Upload attachment first
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const uploadResp = await fetch("/api/messages/attachments", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!uploadResp.ok) {
+          const err = await uploadResp.json().catch(() => ({}));
+          setAttachmentError(err.message || "Failed to upload attachment");
+          return; // Do not send message if attachment failed
+        }
+
+        const uploadData = await uploadResp.json();
+        attachmentPayload = {
+          attachmentUrl: uploadData.attachmentUrl,
+          attachmentType: "image",
+          attachmentOriginalName: uploadData.originalName,
+        };
+      }
 
       const response = await fetch("/api/messages/send", {
         method: "POST",
@@ -166,12 +248,14 @@ export default function Messages() {
           message: messageInput,
           senderType: user.userType,
           receiverType: activeConversation.userType,
+          ...attachmentPayload,
         }),
       });
 
       if (response.ok) {
         setMessageInput("");
         setErrorMessage(null);
+        clearAttachment();
         await fetchChatMessages(activeConversation.userId);
         await fetchConversations();
       } else {
@@ -288,7 +372,17 @@ export default function Messages() {
                     chatMessages.map((msg) => (
                       <div key={msg.id} className={`flex ${msg.isMine ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.isMine ? "bg-indigo-600 text-white" : "bg-slate-700 text-white"}`}>
-                          <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                          {msg.attachmentUrl && (
+                            <div className="mb-2">
+                              <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" download={msg.attachmentOriginalName || true}>
+                                <img src={msg.attachmentUrl} alt={msg.attachmentOriginalName || "Attachment"} className="max-h-64 rounded-lg border border-slate-600 mb-1 object-contain" />
+                              </a>
+                              <a href={msg.attachmentUrl} download={msg.attachmentOriginalName || true} className={`text-xs underline ${msg.isMine ? "text-indigo-100" : "text-slate-200"}`}>
+                                Download image{msg.attachmentOriginalName ? ` (${msg.attachmentOriginalName})` : ""}
+                              </a>
+                            </div>
+                          )}
+                          {msg.message && <p className="whitespace-pre-wrap break-words">{msg.message}</p>}
                           <p className={`text-xs mt-1 ${msg.isMine ? "text-indigo-200" : "text-slate-400"}`}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                         </div>
                       </div>
@@ -299,11 +393,27 @@ export default function Messages() {
 
                 {/* Input */}
                 <div className="p-4 border-t border-slate-700 flex-shrink-0">
+                  {attachmentError && <p className="text-xs text-red-400 mb-2">{attachmentError}</p>}
+                  {selectedFile && attachmentPreviewUrl && (
+                    <div className="mb-2 flex items-center justify-between bg-slate-700/60 border border-slate-600 rounded-lg p-2">
+                      <div className="flex items-center space-x-2">
+                        <ImageIcon className="w-4 h-4 text-slate-200" />
+                        <span className="text-xs text-slate-100 truncate max-w-[200px]">{selectedFile.name}</span>
+                      </div>
+                      <button type="button" onClick={clearAttachment} className="text-slate-300 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                   <div className="flex items-center space-x-2">
+                    <button type="button" onClick={handleAttachmentClick} className="p-2 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-200 flex items-center justify-center">
+                      <ImageIcon className="w-5 h-5" />
+                    </button>
                     <Input value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type a message..." className="flex-1 bg-slate-700 border-slate-600 text-white" />
-                    <Button onClick={sendMessage} disabled={!messageInput.trim()} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button onClick={sendMessage} disabled={!messageInput.trim() && !selectedFile} className="bg-indigo-600 hover:bg-indigo-700">
                       <Send className="w-5 h-5" />
                     </Button>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAttachmentChange} />
                   </div>
                 </div>
               </Card>
