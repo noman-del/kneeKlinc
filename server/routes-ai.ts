@@ -4,7 +4,9 @@ import { authenticateToken, authorizeRole, AuthRequest } from "./auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { AIAnalysis, Message, Appointment, DoctorRecommendation, CommunityPost, CommunityReply, insertAIAnalysisSchema, insertMessageSchema, insertAppointmentSchema, updateAppointmentStatusSchema, insertDoctorRecommendationSchema, rescheduleAppointmentSchema } from "@shared/additional-schema";
+import fetch from "node-fetch";
+import FormData from "form-data";
+import { AIAnalysis, Message, Appointment, DoctorRecommendation, CommunityPost, CommunityReply, DefaultRecommendation, PatientRecommendationProfile, insertAIAnalysisSchema, insertMessageSchema, insertAppointmentSchema, updateAppointmentStatusSchema, insertDoctorRecommendationSchema, rescheduleAppointmentSchema } from "@shared/additional-schema";
 import { User } from "@shared/schema";
 import { emailService } from "./services/emailService";
 
@@ -27,14 +29,8 @@ const uploadXray = multer({
   storage: xrayStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|dicom|dcm/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files (JPEG, PNG) or DICOM files are allowed"));
-    }
+    // Allow any file type to pass through; AI or downstream validation will handle invalid content.
+    cb(null, true);
   },
 }).single("xray");
 
@@ -66,27 +62,90 @@ export function registerAIRoutes(app: Express) {
         }
 
         const xrayImageUrl = `/uploads/xrays/${req.file.filename}`;
+        const aiEndpoint = process.env.AI_MODEL_API;
+        if (!aiEndpoint) {
+          return res.status(500).json({ message: "AI model API is not configured" });
+        }
 
-        // TODO: Replace with actual AI model inference
-        // For now, return dummy AI analysis
-        const dummyAnalysis = {
-          klGrade: "2",
-          severity: "Minimal",
-          riskScore: 35,
-          oaStatus: true,
-          recommendations: ["Maintain a healthy weight to reduce joint stress", "Engage in low-impact exercises like swimming or cycling 3x per week", "Include anti-inflammatory foods in your diet (omega-3, turmeric)", "Consider physical therapy for strengthening exercises", "Avoid high-impact activities and prolonged standing"],
-        };
+        const formData = new FormData();
+        // External API expects image file under key "file" based on provided examples
+        formData.append("file", fs.createReadStream(req.file.path));
 
-        // Save analysis to database
+        // Keep AI request alive but cap at 10 minutes using AbortController
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10 * 60 * 1000);
+
+        let aiResponse;
+        try {
+          aiResponse = await fetch(aiEndpoint, {
+            method: "POST",
+            body: formData as any,
+            // @ts-ignore node-fetch signal type
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (!aiResponse.ok) {
+          console.error("External AI API error:", aiResponse.status, aiResponse.statusText);
+          return res.status(502).json({
+            message: "Failed to retrieve AI analysis. Please try again later.",
+          });
+        }
+
+        const aiJson: any = await aiResponse.json();
+
+        if (!aiJson?.success || !aiJson?.prediction) {
+          return res.status(400).json({
+            message: "The image does not appear to show knee osteoarthritis. Please upload a valid knee OA X-ray.",
+          });
+        }
+
+        const gradeIndex: number = aiJson.prediction.grade_index;
+        const label: string = aiJson.prediction.label;
+        const confidence: number = aiJson.prediction.confidence_score;
+
+        // Allow KL grades 0-5 from external model
+        const klGrade = String(gradeIndex);
+        const oaStatus = klGrade !== "0";
+
+        // Fetch default recommendations for this KL grade from DB
+        const defaultRecDoc = await DefaultRecommendation.findOne({ klGrade });
+
+        if (!defaultRecDoc) {
+          throw new Error(`No default configuration found for KL grade ${klGrade}. Please run the seed script: npm run seed:defaults`);
+        }
+
+        // Read all config from DB
+        const docAny = defaultRecDoc as any;
+        const recommendations: string[] = docAny.items || [];
+        const severity: string | undefined = docAny.severity;
+        const riskScore: number | undefined = docAny.riskScore;
+
+        if (!severity) {
+          throw new Error(`DefaultRecommendation for KL grade ${klGrade} is missing a valid severity. Please update the database or rerun the seed script.`);
+        }
+
+        if (typeof riskScore !== "number") {
+          throw new Error(`DefaultRecommendation for KL grade ${klGrade} is missing a numeric riskScore. Please update the database or rerun the seed script.`);
+        }
+
+        if (recommendations.length === 0) {
+          throw new Error(`DefaultRecommendation for KL grade ${klGrade} has no items. Please update the database.`);
+        }
+
+        // Save analysis to database but mark as not yet saved to profile/history
         const analysis = new AIAnalysis({
           patientId: userId,
           xrayImageUrl,
-          klGrade: dummyAnalysis.klGrade,
-          severity: dummyAnalysis.severity,
-          riskScore: dummyAnalysis.riskScore,
-          oaStatus: dummyAnalysis.oaStatus,
-          recommendations: dummyAnalysis.recommendations,
+          klGrade,
+          severity,
+          riskScore,
+          oaStatus,
+          recommendations,
           analysisDate: new Date(),
+          isSavedToProfile: false,
         });
 
         await analysis.save();
@@ -102,6 +161,8 @@ export function registerAIRoutes(app: Express) {
             recommendations: analysis.recommendations,
             xrayImageUrl: analysis.xrayImageUrl,
             analysisDate: analysis.analysisDate,
+            externalLabel: label,
+            externalConfidence: confidence,
           },
         });
       } catch (error) {
@@ -112,13 +173,95 @@ export function registerAIRoutes(app: Express) {
   );
 
   /**
+   * GET /api/patient/recommendations
+   * Get saved recommendation profile for the authenticated patient user
+   */
+  app.get("/api/patient/recommendations", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      if (req.user!.userType !== "patient") {
+        return res.status(403).json({ message: "Only patients can access personal recommendations" });
+      }
+
+      const profile = await PatientRecommendationProfile.findOne({ userId });
+      if (!profile) {
+        return res.json({ recommendationProfile: null });
+      }
+
+      res.json({
+        recommendationProfile: {
+          id: profile._id,
+          klGrade: profile.klGrade,
+          label: profile.label,
+          recommendations: profile.recommendations,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+        },
+      });
+    } catch (error) {
+      console.error("Fetch patient recommendations error:", error);
+      res.status(500).json({ message: "Failed to fetch recommendations" });
+    }
+  });
+
+  /**
+   * POST /api/patient/recommendations
+   * Save or update the authenticated patient's recommendation profile
+   */
+  app.post("/api/patient/recommendations", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      if (req.user!.userType !== "patient") {
+        return res.status(403).json({ message: "Only patients can save personal recommendations" });
+      }
+
+      const schema = z.object({
+        klGrade: z.string(),
+        label: z.string().optional(),
+        recommendations: z.array(z.string()).min(1),
+      });
+
+      const payload = schema.parse(req.body);
+
+      const profile = await PatientRecommendationProfile.findOneAndUpdate(
+        { userId },
+        {
+          userId,
+          klGrade: payload.klGrade,
+          label: payload.label,
+          recommendations: payload.recommendations,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      res.status(201).json({
+        message: "Recommendations saved successfully",
+        recommendationProfile: {
+          id: profile._id,
+          klGrade: profile.klGrade,
+          label: profile.label,
+          recommendations: profile.recommendations,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+        },
+      });
+    } catch (error) {
+      console.error("Save patient recommendations error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to save recommendations" });
+    }
+  });
+
+  /**
    * GET /api/ai/analyses
-   * Get all AI analyses for the authenticated user
+   * Get all AI analyses for the authenticated user that are saved to profile/history
    */
   app.get("/api/ai/analyses", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
-      const analyses = await AIAnalysis.find({ patientId: userId }).sort({ createdAt: -1 });
+      const analyses = await AIAnalysis.find({ patientId: userId, isSavedToProfile: true }).sort({ createdAt: -1 });
 
       res.json({
         analyses: analyses.map((a) => ({
@@ -136,6 +279,45 @@ export function registerAIRoutes(app: Express) {
     } catch (error) {
       console.error("Fetch analyses error:", error);
       res.status(500).json({ message: "Failed to fetch AI analyses" });
+    }
+  });
+
+  /**
+   * POST /api/ai/analyses/:id/save-to-profile
+   * Mark an analysis as saved to profile/progress for the authenticated user
+   */
+  app.post("/api/ai/analyses/:id/save-to-profile", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+
+      const analysis = await AIAnalysis.findOne({ _id: id, patientId: userId });
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      if (!analysis.isSavedToProfile) {
+        analysis.isSavedToProfile = true;
+        await analysis.save();
+      }
+
+      res.json({
+        message: "Analysis saved to profile successfully",
+        analysis: {
+          id: analysis._id,
+          klGrade: analysis.klGrade,
+          severity: analysis.severity,
+          riskScore: analysis.riskScore,
+          oaStatus: analysis.oaStatus,
+          recommendations: analysis.recommendations,
+          xrayImageUrl: analysis.xrayImageUrl,
+          analysisDate: analysis.analysisDate,
+          createdAt: analysis.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("Save analysis to profile error:", error);
+      res.status(500).json({ message: "Failed to save analysis to profile" });
     }
   });
 

@@ -12,6 +12,7 @@ export interface IAIAnalysis extends Document {
   oaStatus: boolean; // true = OA detected, false = No OA
   gradCamUrl?: string; // Heatmap visualization
   recommendations: string[]; // AI-generated lifestyle recommendations
+  isSavedToProfile: boolean; // whether user has chosen to keep this in their progress/history
   analysisDate: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -21,12 +22,13 @@ const aiAnalysisSchema = new Schema<IAIAnalysis>(
   {
     patientId: { type: Schema.Types.ObjectId, ref: "Patient", required: true },
     xrayImageUrl: { type: String, required: true },
-    klGrade: { type: String, required: true, enum: ["0", "1", "2", "3", "4"] },
+    klGrade: { type: String, required: true, enum: ["0", "1", "2", "3", "4", "5"] },
     severity: { type: String, required: true, enum: ["Normal", "Minimal", "Moderate", "Severe", "Very Severe"] },
     riskScore: { type: Number, required: true, min: 0, max: 100 },
     oaStatus: { type: Boolean, required: true },
     gradCamUrl: String,
     recommendations: [{ type: String }],
+    isSavedToProfile: { type: Boolean, default: false },
     analysisDate: { type: Date, default: Date.now },
   },
   {
@@ -141,6 +143,62 @@ const doctorRecommendationSchema = new Schema<IDoctorRecommendation>(
 
 export const DoctorRecommendation = mongoose.model<IDoctorRecommendation>("DoctorRecommendation", doctorRecommendationSchema);
 
+// ==================== PATIENT & DEFAULT RECOMMENDATION MODELS ====================
+
+export interface IDefaultRecommendation extends Document {
+  klGrade: string; // "0"-"5"
+  label: string; // e.g. "KL 0 – No OA", "KL 2 – Mild OA"
+  items: string[]; // Default lifestyle / treatment recommendations
+  severity: string; // "Normal", "Minimal", "Moderate", "Severe", "Very Severe"
+  riskScore: number; // 0-100, per-grade default risk
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const defaultRecommendationSchema = new Schema<IDefaultRecommendation>(
+  {
+    klGrade: { type: String, required: true, enum: ["0", "1", "2", "3", "4"] },
+    label: { type: String, required: true },
+    items: [{ type: String, required: true }],
+    severity: {
+      type: String,
+      required: true,
+      enum: ["Normal", "Minimal", "Moderate", "Severe", "Very Severe"],
+    },
+    riskScore: { type: Number, required: true, min: 0, max: 100 },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+defaultRecommendationSchema.index({ klGrade: 1 }, { unique: true });
+
+export const DefaultRecommendation = mongoose.model<IDefaultRecommendation>("DefaultRecommendation", defaultRecommendationSchema);
+
+export interface IPatientRecommendationProfile extends Document {
+  userId: mongoose.Types.ObjectId; // reference User._id (patient user)
+  klGrade: string; // last saved KL grade
+  label?: string; // optional label like "2_Minimal"
+  recommendations: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const patientRecommendationProfileSchema = new Schema<IPatientRecommendationProfile>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    klGrade: { type: String, required: true },
+    label: String,
+    recommendations: [{ type: String, required: true }],
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export const PatientRecommendationProfile = mongoose.model<IPatientRecommendationProfile>("PatientRecommendationProfile", patientRecommendationProfileSchema);
+
 // ==================== DOCTOR AVAILABILITY MODELS ====================
 
 export interface IDoctorAvailability extends Document {
@@ -221,7 +279,7 @@ export const CommunityReply = mongoose.model<ICommunityReply>("CommunityReply", 
 export const insertAIAnalysisSchema = z.object({
   patientId: z.string(),
   xrayImageUrl: z.string().url(),
-  klGrade: z.enum(["0", "1", "2", "3", "4"]),
+  klGrade: z.enum(["0", "1", "2", "3", "4", "5"]),
   severity: z.enum(["Normal", "Minimal", "Moderate", "Severe", "Very Severe"]),
   riskScore: z.number().min(0).max(100),
   oaStatus: z.boolean(),

@@ -10,7 +10,7 @@ import path from "path";
 import fs from "fs";
 import { registerAIRoutes } from "./routes-ai";
 import { otpService } from "./services/otpService";
-import { Appointment } from "@shared/additional-schema";
+import { Appointment, AIAnalysis } from "@shared/additional-schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register AI, Messaging, and Appointment routes
@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin stats
   app.get("/api/admin/stats", authenticateToken, authorizeRole("admin"), async (_req: AuthRequest, res) => {
     try {
-      const [totalUsers, totalDoctors, totalPatients, totalAdmins, totalAppointments, statusCounts] = await Promise.all([
+      const [totalUsers, totalDoctors, totalPatients, totalAdmins, totalAppointments, statusCounts, aiTotalAnalyses, aiByKlGradeAgg, aiByOaStatusAgg] = await Promise.all([
         // Only count non-admin users in totalUsers
         User.countDocuments({ userType: { $in: ["doctor", "patient"] } }),
         User.countDocuments({ userType: "doctor" }),
@@ -561,11 +561,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         User.countDocuments({ userType: "admin" }),
         Appointment.countDocuments(),
         Appointment.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+        AIAnalysis.countDocuments(),
+        AIAnalysis.aggregate([{ $group: { _id: "$klGrade", count: { $sum: 1 } } }]),
+        AIAnalysis.aggregate([{ $group: { _id: "$oaStatus", count: { $sum: 1 } } }]),
       ]);
 
       const appointmentsByStatus: Record<string, number> = {};
       for (const row of statusCounts as any[]) {
         appointmentsByStatus[row._id] = row.count;
+      }
+
+      const aiByKlGrade: Record<string, number> = {};
+      for (const row of aiByKlGradeAgg as any[]) {
+        aiByKlGrade[row._id] = row.count;
+      }
+
+      const aiByOaStatus: { withOA: number; withoutOA: number } = { withOA: 0, withoutOA: 0 };
+      for (const row of aiByOaStatusAgg as any[]) {
+        if (row._id === true) aiByOaStatus.withOA = row.count;
+        if (row._id === false) aiByOaStatus.withoutOA = row.count;
       }
 
       res.json({
@@ -575,6 +589,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAdmins,
         totalAppointments,
         appointmentsByStatus,
+        aiTotalAnalyses,
+        aiByKlGrade,
+        aiByOaStatus,
       });
     } catch (error) {
       console.error("Admin stats error:", error);

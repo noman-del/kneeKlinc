@@ -12,25 +12,81 @@ export default function Home() {
   const isPatient = (user as any)?.userType === "patient";
   const [latestRecommendations, setLatestRecommendations] = useState<any[]>([]);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
+  const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
 
-  // Load latest recommendations from localStorage
   useEffect(() => {
-    const recommendations = JSON.parse(localStorage.getItem("latestRecommendations") || "[]");
-    setLatestRecommendations(recommendations);
+    const fetchPersonalRecommendations = async () => {
+      if (!isPatient) return;
+      try {
+        setIsLoadingRecommendations(true);
+        setRecommendationsError(null);
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/patient/recommendations", {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
 
-    // Auto-scroll to recommendations section if URL has hash
-    if (window.location.hash === "#recommendations-section") {
-      setTimeout(() => {
-        const element = document.getElementById("recommendations-section");
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (!response.ok) {
+          if (response.status === 403 || response.status === 404) {
+            return;
+          }
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.message || "Failed to load recommendations");
         }
-        // Clear the hash after scrolling to prevent auto-scroll on reload
-        window.history.replaceState({}, "", window.location.pathname);
-      }, 500);
-    }
-  }, []);
 
+        const data = await response.json();
+        if (data?.recommendationProfile?.recommendations?.length) {
+          const mapped = data.recommendationProfile.recommendations.map((rec: string, idx: number) => ({
+            icon: idx === 0 ? "Activity" : idx === 1 ? "Heart" : idx === 2 ? "Target" : "Brain",
+            title: rec.split(":")[0] || "Recommendation",
+            description: rec,
+            isNew: false,
+          }));
+          setLatestRecommendations(mapped);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load recommendations";
+        setRecommendationsError(message);
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
+    fetchPersonalRecommendations();
+  }, [isPatient]);
+
+  useEffect(() => {
+    const fetchRecentAnalyses = async () => {
+      if (!isPatient) return;
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/ai/analyses", {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 403 || response.status === 404) {
+            return;
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data?.analyses)) {
+          setRecentAnalyses(data.analyses);
+        }
+      } catch {
+        // Silent fail for recent analyses; keep static placeholder if desired
+      }
+    };
+
+    fetchRecentAnalyses();
+  }, [isPatient]);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -197,40 +253,44 @@ export default function Home() {
                 <h2 className="text-xl font-bold text-white">{isDoctor ? "Recent Patient Assessments" : "Recent AI Assessments"}</h2>
               </div>
 
-              <div className="space-y-4 flex-1">
-                <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Brain className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-base" data-testid="text-assessment-title">
-                        {isDoctor ? "Patient: Sarah Johnson" : "Knee X-ray Analysis"}
-                      </h3>
-                      <p className="text-white/70 text-sm" data-testid="text-assessment-details">
-                        {isDoctor ? "Moderate OA progression detected" : "Moderate osteoarthritis detected"}
-                      </p>
+              <div className="space-y-4 flex-1 max-h-80 overflow-y-auto pr-2">
+                {isPatient && recentAnalyses.length > 0 ? (
+                  recentAnalyses.map((a, idx) => {
+                    const date = a.analysisDate ? new Date(a.analysisDate) : null;
+                    const dateLabel = date ? date.toLocaleDateString() : "";
+                    const subtitle = `KL Grade ${a.klGrade} • ${a.severity} OA • Risk ${a.riskScore}%`;
+                    return (
+                      <div key={a.id || idx} className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Brain className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white text-base" data-testid="text-assessment-title">
+                              Knee X-ray Analysis
+                            </h3>
+                            <p className="text-white/70 text-sm" data-testid="text-assessment-details">
+                              {subtitle}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-white/60 text-xs">{dateLabel}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Brain className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white text-base">No recent assessments</h3>
+                        <p className="text-white/70 text-sm">Complete an AI X-ray analysis and save it to see it here.</p>
+                      </div>
                     </div>
                   </div>
-                  <span className="text-white/60 text-xs">2 hours ago</span>
-                </div>
-
-                <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <TrendingUp className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-base" data-testid="text-progress-title">
-                        {isDoctor ? "Treatment Progress" : "Progress Update"}
-                      </h3>
-                      <p className="text-white/70 text-sm" data-testid="text-progress-details">
-                        {isDoctor ? "Improved adherence score" : "Monthly assessment completed"}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-white/60 text-xs">1 week ago</span>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -246,7 +306,7 @@ export default function Home() {
                 <h2 className="text-xl font-bold text-white">{isDoctor ? "Clinical Insights" : "Lifestyle Recommendations"}</h2>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-6 max-h-80 overflow-y-auto pr-2">
                 {isDoctor ? (
                   <>
                     <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
@@ -275,18 +335,21 @@ export default function Home() {
                   <>
                     {/* Always show recommendations - AI ones first, then default ones */}
                     {latestRecommendations.length > 0 ? (
-                      latestRecommendations.map((rec, index) => (
-                        <div key={index} className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
-                          <div className="flex items-center space-x-3 mb-3">
-                            {rec.icon === "Activity" && <Activity className="text-orange-300 w-6 h-6" />}
-                            {rec.icon === "Heart" && <Heart className="text-blue-300 w-6 h-6" />}
-                            {rec.icon === "Target" && <Target className="text-purple-300 w-6 h-6" />}
-                            {rec.icon === "Brain" && <Brain className="text-slate-300 w-6 h-6" />}
-                            <span className="font-semibold text-white text-lg">{rec.title}</span>
+                      latestRecommendations.map((rec, index) => {
+                        const iconIndex = index % 3;
+                        return (
+                          <div key={index} className="p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300 flex items-center space-x-4">
+                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                              {iconIndex === 0 && <Activity className="w-5 h-5 text-white" />}
+                              {iconIndex === 1 && <Heart className="w-5 h-5 text-white" />}
+                              {iconIndex === 2 && <Brain className="w-5 h-5 text-white" />}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-white/80 text-sm leading-relaxed">{rec.description}</p>
+                            </div>
                           </div>
-                          <p className="text-white/80 leading-relaxed">{rec.description}</p>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <>
                         <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
@@ -320,8 +383,7 @@ export default function Home() {
         </div>
 
         {/* Quick Access Section */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-        </div>
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6"></div>
       </div>
     </div>
   );

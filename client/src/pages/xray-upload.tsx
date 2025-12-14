@@ -1,16 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileImage, CheckCircle, Brain, TrendingUp } from "lucide-react";
+import { Upload, FileImage, CheckCircle, Brain, TrendingUp, X, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function XrayUpload() {
+  const { user } = useAuth();
+  const isPatient = (user as any)?.userType === "patient";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [klGrade, setKlGrade] = useState<string | null>(null);
+  const [externalLabel, setExternalLabel] = useState<string | null>(null);
+  const [severityText, setSeverityText] = useState<string | null>(null);
+  const [recommendationList, setRecommendationList] = useState<{ icon: string; title: string; description: string; isNew: boolean }[]>([]);
+  const [isSavingRecommendations, setIsSavingRecommendations] = useState(false);
+  const [hasSavedRecommendations, setHasSavedRecommendations] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Auto-hide API error after 5 seconds
+  useEffect(() => {
+    if (!apiError) return;
+    const timer = setTimeout(() => {
+      setApiError(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [apiError]);
 
   // Generate AI recommendations based on analysis result
   const generateRecommendations = (grade: string) => {
@@ -46,6 +65,19 @@ export default function XrayUpload() {
     }
 
     return baseRecommendations;
+  };
+
+  const handleClearFile = () => {
+    setSelectedFile(null);
+    setAnalysisResult(null);
+    setErrorMessage(null);
+    setApiError(null);
+    setKlGrade(null);
+    setExternalLabel(null);
+    setRecommendationList([]);
+    setSaveMessage(null);
+    setHasSavedRecommendations(false);
+    setSeverityText(null);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,28 +126,36 @@ export default function XrayUpload() {
 
     setIsAnalyzing(true);
     setApiError(null);
+    setSaveMessage(null);
+    setHasSavedRecommendations(false);
 
     try {
       // Real AI API integration
       const formData = new FormData();
-      formData.append('xray', selectedFile);
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/ai/analyze-xray', {
-        method: 'POST',
+      formData.append("xray", selectedFile);
+
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/ai/analyze-xray", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
-        body: formData
+        body: formData,
       });
 
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.status} ${response.statusText}`);
+        const message = data?.message || "Analysis failed. Please try again.";
+        throw new Error(message);
       }
 
-      const result = await response.json();
+      const result = data;
       const analysisText = `KL Grade ${result.analysis.klGrade} - ${result.analysis.severity} OA`;
       setAnalysisResult(analysisText);
+      setKlGrade(result.analysis.klGrade);
+      setExternalLabel(result.analysis.externalLabel || null);
+      setSeverityText(result.analysis.severity || null);
 
       // Add to recent assessments
       const newAssessment = {
@@ -133,20 +173,79 @@ export default function XrayUpload() {
 
       // Store AI recommendations
       const recommendations = result.analysis.recommendations.map((rec: string, idx: number) => ({
-        icon: idx === 0 ? "Activity" : idx === 1 ? "Heart" : "Target",
-        title: rec.split(':')[0] || "Recommendation",
+        icon: idx === 0 ? "Activity" : idx === 1 ? "Heart" : idx === 2 ? "Target" : "Brain",
+        title: rec.split(":")[0] || "Recommendation",
         description: rec,
         isNew: false,
       }));
+      setRecommendationList(recommendations);
       localStorage.setItem("latestRecommendations", JSON.stringify(recommendations));
       localStorage.setItem("latestAnalysisId", result.analysis.id);
-
     } catch (error) {
       console.error("AI Analysis Error:", error);
       setApiError(error instanceof Error ? error.message : "Analysis failed. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleSaveAsMyRecommendations = async () => {
+    if (!isPatient || !klGrade || recommendationList.length === 0) return;
+
+    try {
+      setIsSavingRecommendations(true);
+      setSaveMessage(null);
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/patient/recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          klGrade,
+          label: externalLabel || analysisResult || undefined,
+          recommendations: recommendationList.map((r) => r.description),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to save recommendations");
+      }
+
+      setSaveMessage("Recommendations saved to your profile.");
+      setHasSavedRecommendations(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save recommendations";
+      setSaveMessage(message);
+    } finally {
+      setIsSavingRecommendations(false);
+    }
+  };
+
+  const handleViewProgress = async () => {
+    if (isPatient && recommendationList.length > 0 && !hasSavedRecommendations) {
+      await handleSaveAsMyRecommendations();
+    }
+
+    try {
+      const latestAnalysisId = localStorage.getItem("latestAnalysisId");
+      const token = localStorage.getItem("token");
+      if (latestAnalysisId && token) {
+        await fetch(`/api/ai/analyses/${latestAnalysisId}/save-to-profile`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to mark analysis as saved to profile", err);
+      // Do not block navigation on this error; still allow user to view progress
+    }
+
+    window.location.href = "/progress";
   };
 
   return (
@@ -275,7 +374,6 @@ export default function XrayUpload() {
                   <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-2xl">
                     <p className="text-red-300 font-semibold">⚠️ Analysis Failed</p>
                     <p className="text-red-200 text-sm mt-1">{apiError}</p>
-                    <p className="text-red-200/80 text-xs mt-2">Check your internet connection or try again later.</p>
                   </div>
                 )}
 
@@ -291,7 +389,11 @@ export default function XrayUpload() {
                         <p className="font-bold text-white text-lg">{selectedFile.name}</p>
                         <p className="text-emerald-300 text-sm font-medium">✓ Ready for AI analysis • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
-                      <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
+                      {!isAnalyzing && (
+                        <button type="button" onClick={handleClearFile} className="ml-2 inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-500/70 text-slate-300 hover:text-white hover:bg-slate-700/80 transition-colors" aria-label="Clear selected X-ray image">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -326,29 +428,31 @@ export default function XrayUpload() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-3xl blur-xl"></div>
             <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-3xl p-12">
               <div className="text-center">
-                <div className="relative mx-auto mb-8">
-                  <div className="w-28 h-28 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300">
-                    <CheckCircle className="w-16 h-16 text-white" />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full flex items-center justify-center">
-                    <span className="text-sm">🎉</span>
+                <div className="flex flex-col items-center mb-8">
+                  <div className="flex items-center justify-center space-x-6">
+                    <div className="relative">
+                      <div className="w-28 h-28 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300">
+                        <CheckCircle className="w-16 h-16 text-white" />
+                      </div>
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+                        Analysis <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Complete</span>
+                      </h2>
+                      {klGrade && (
+                        <div className="inline-flex items-center px-6 py-2 rounded-2xl border border-emerald-500/70 bg-emerald-500/15 shadow-lg shadow-emerald-500/20">
+                          <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-slate-900 text-sm font-extrabold">KL</span>
+                          <div className="text-left">
+                            <p className="text-xs uppercase tracking-wide text-emerald-300/90">Kellgren-Lawrence Grade</p>
+                            <p className="text-lg md:text-xl font-bold text-white">Grade {klGrade}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <h2 className="text-4xl font-bold text-white mb-6">
-                  Analysis <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Complete</span>
-                </h2>
-
-                <div className="relative mb-10">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-3xl blur-lg"></div>
-                  <div className="relative bg-slate-800/80 backdrop-blur-sm border border-slate-600/60 rounded-3xl p-8">
-                    <h3 className="text-2xl font-bold text-white mb-4">AI Diagnosis Result</h3>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent mb-4">{analysisResult}</p>
-                    <p className="text-slate-300 text-lg leading-relaxed">Your X-ray has been successfully analyzed using our advanced AI-powered Kellgren-Lawrence grading system with medical-grade accuracy.</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                {/* Severity & OA status row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-left">
                   <div className="bg-slate-800/70 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
@@ -356,35 +460,72 @@ export default function XrayUpload() {
                       </div>
                       <h4 className="font-bold text-white text-lg">Severity Level</h4>
                     </div>
-                    <p className="text-emerald-300 font-semibold text-xl">Minimal Osteoarthritis</p>
+                    <p className="text-emerald-300 font-semibold text-xl">{severityText ? `${severityText} Osteoarthritis` : "Severity not available"}</p>
                   </div>
                   <div className="bg-slate-800/70 backdrop-blur-sm border border-slate-600/50 rounded-2xl p-6">
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-                        <span className="text-xs">💡</span>
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                        <span className="text-xs">🦴</span>
                       </div>
-                      <h4 className="font-bold text-white text-lg">Recommendation</h4>
+                      <h4 className="font-bold text-white text-lg">Osteoarthritis Status</h4>
                     </div>
-                    <p className="text-indigo-300 font-semibold text-xl">Lifestyle modifications</p>
+                    <p className={klGrade === "0" ? "text-emerald-300 font-semibold text-xl" : "text-yellow-300 font-semibold text-xl"}>{klGrade === "0" ? "No radiographic OA detected" : "Radiographic OA detected"}</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+                <div className="space-y-8">
+                  {/* Structured AI Lifestyle Recommendations */}
+                  {recommendationList.length > 0 && (
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-3xl blur-lg"></div>
+                      <div className="relative bg-slate-800/70 backdrop-blur-sm border border-slate-600/50 rounded-3xl p-8 text-left">
+                        <h2 className="text-2xl font-bold text-white mb-4">AI Lifestyle Recommendations</h2>
+                        <div className="space-y-4">
+                          {recommendationList.map((rec, index) => {
+                            const iconIndex = index % 3;
+                            return (
+                              <div key={index} className="flex items-center space-x-4">
+                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                                  {iconIndex === 0 && <Activity className="w-5 h-5 text-white" />}
+                                  {iconIndex === 1 && <Brain className="w-5 h-5 text-white" />}
+                                  {iconIndex === 2 && <FileImage className="w-5 h-5 text-white" />}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-slate-200 text-sm leading-relaxed">{rec.description}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Actions in a Single Row */}
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Left: Analyze another */}
                   <Button
                     onClick={() => {
                       setSelectedFile(null);
                       setAnalysisResult(null);
+                      setRecommendationList([]);
+                      setKlGrade(null);
+                      setExternalLabel(null);
                     }}
-                    className="flex-1 h-14 rounded-2xl bg-slate-700/70 hover:bg-slate-600/80 text-white font-semibold text-lg transition-all duration-300 hover:scale-105 border border-slate-600/50"
+                    className="h-14 rounded-2xl bg-slate-700/70 hover:bg-slate-600/80 text-white font-semibold text-sm sm:text-base transition-all duration-300 hover:scale-105 border border-slate-600/50"
                   >
                     🔄 Analyze Another
                   </Button>
+
+                  {/* Right: View progress */}
                   <Button
-                    onClick={() => (window.location.href = "/progress")}
-                    className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-lg transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-emerald-500/30 border border-white/20"
+                    onClick={handleViewProgress}
+                    disabled={isSavingRecommendations}
+                    className="h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-sm sm:text-base transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-emerald-500/30 border border-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <TrendingUp className="w-5 h-5 mr-2" />
-                    View Progress
+                    Save & View Progress
                   </Button>
                 </div>
               </div>

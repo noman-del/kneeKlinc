@@ -10,6 +10,9 @@ type AdminStats = {
   totalAdmins: number;
   totalAppointments: number;
   appointmentsByStatus: Record<string, number>;
+  aiTotalAnalyses: number;
+  aiByKlGrade: Record<string, number>;
+  aiByOaStatus: { withOA: number; withoutOA: number };
 };
 
 type AdminUser = {
@@ -187,18 +190,114 @@ function Admin() {
               <OverviewCard title="Appointments" value={stats?.totalAppointments ?? 0} icon={CalendarDays} accent="from-amber-500/20 to-orange-500/20" />
             </div>
 
-            {/* Appointments by status quick view */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 flex flex-wrap items-center gap-3">
-              <p className="text-xs font-semibold tracking-wide text-slate-300 uppercase">Appointments by status</p>
-              <div className="flex flex-wrap gap-2 text-xs">
-                {Object.entries(stats?.appointmentsByStatus || {}).map(([status, count]) => (
-                  <span key={status} className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-slate-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    <span className="capitalize">{status}</span>
-                    <span className="text-slate-400">· {count}</span>
-                  </span>
-                ))}
-                {(!stats || !Object.keys(stats.appointmentsByStatus || {}).length) && <span className="text-slate-500 text-xs">No appointment data yet.</span>}
+            {/* Appointments by status quick view with circular meter */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/95 px-6 py-6 flex items-center gap-6 shadow-xl shadow-black/40 transition-all duration-300 hover:shadow-emerald-500/20 hover:-translate-y-0.5">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold tracking-[0.16em] text-slate-200 uppercase mb-3">Appointments by Status</p>
+                  <div className="flex items-center gap-4">
+                    {stats && stats.totalAppointments > 0 ? (
+                      <div
+                        className="relative h-28 w-28 rounded-full border border-slate-700/80 flex items-center justify-center text-xs text-slate-200 shadow-inner shadow-black/40"
+                        style={{
+                          background: (() => {
+                            const total = stats.totalAppointments || 0;
+                            const colors: Record<string, string> = {
+                              scheduled: "#38bdf8", // cyan-400
+                              confirmed: "#22c55e", // emerald-500
+                              completed: "#a855f7", // purple-500
+                              cancelled: "#f97316", // orange-500
+                            };
+                            const entries = Object.entries(stats.appointmentsByStatus || {});
+                            if (!entries.length || !total) return "radial-gradient(circle at center, #0f172a 60%, #020617 61%)";
+                            let current = 0;
+                            const segments: string[] = [];
+                            for (const [status, count] of entries) {
+                              const value = typeof count === "number" ? count : 0;
+                              if (!value) continue;
+                              const start = current;
+                              const end = current + (value / total) * 360;
+                              const color = colors[status] || "#64748b"; // slate-500 fallback
+                              segments.push(`${color} ${start}deg ${end}deg`);
+                              current = end;
+                            }
+                            const ring = segments.length ? `conic-gradient(${segments.join(", ")})` : "conic-gradient(#1e293b 0deg 360deg)";
+                            return `${ring}, radial-gradient(circle at center, #020617 55%, transparent 56%)`;
+                          })(),
+                        }}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="text-xs text-slate-300">Total</div>
+                            <div className="text-2xl font-semibold text-slate-50">{stats.totalAppointments}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-24 w-24 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-xs text-slate-500">No data</div>
+                    )}
+                    <div className="flex-1 space-y-1 text-sm">
+                      {stats ? (
+                        [
+                          { key: "scheduled", label: "scheduled", color: "bg-cyan-400" },
+                          { key: "confirmed", label: "confirmed", color: "bg-emerald-500" },
+                          { key: "completed", label: "completed", color: "bg-purple-500" },
+                          { key: "cancelled", label: "cancelled", color: "bg-orange-500" },
+                        ].map((s) => {
+                          const count = stats.appointmentsByStatus?.[s.key] ?? 0;
+                          return (
+                            <div key={s.key} className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${s.color}`} />
+                                <span className="capitalize text-slate-100">{s.label}</span>
+                              </div>
+                              <span className="text-slate-400">{count}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-slate-500 text-sm">No appointment data yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI usage summary */}
+              <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/95 px-6 py-6 flex flex-col gap-3 shadow-xl shadow-black/40 transition-all duration-300 hover:shadow-cyan-500/20 hover:-translate-y-0.5">
+                <p className="text-sm font-semibold tracking-[0.16em] text-slate-200 uppercase">AI X-ray Usage</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-semibold text-emerald-400">{stats?.aiTotalAnalyses ?? 0}</span>
+                  <span className="text-sm text-slate-300">total analyses run</span>
+                </div>
+                {stats && stats.aiTotalAnalyses > 0 && (
+                  <div className="grid grid-cols-2 gap-3 text-sm text-slate-200">
+                    <div className="space-y-1">
+                      <p className="text-slate-400 text-xs uppercase">By OA status</p>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full bg-amber-400" /> With OA
+                        </span>
+                        <span className="text-slate-100">{stats.aiByOaStatus.withOA}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" /> No OA
+                        </span>
+                        <span className="text-slate-200">{stats.aiByOaStatus.withoutOA}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-slate-400 text-[11px] uppercase">By KL grade</p>
+                      {Object.entries(stats.aiByKlGrade || {}).map(([grade, count]) => (
+                        <div key={grade} className="flex items-center justify-between">
+                          <span className="text-slate-200">KL {grade}</span>
+                          <span className="text-slate-400">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -229,8 +328,9 @@ function Admin() {
                     </tr>
                   )}
                   {doctorsData?.doctors.map((d: any) => {
-                    const linkedUser = d.userId as AdminUser | undefined;
-                    const userId = linkedUser?._id;
+                    const linkedUser = d.userId as AdminUser | string | undefined;
+                    const linkedUserObj: AdminUser | undefined = typeof linkedUser === "string" ? undefined : linkedUser;
+                    const userId = typeof linkedUser === "string" ? linkedUser : linkedUserObj?._id;
                     return (
                       <tr key={d._id} className="hover:bg-slate-800/60">
                         <td className="px-4 py-2 text-slate-100">{`${d.title || ""} ${d.firstName || ""} ${d.lastName || ""}`.trim()}</td>
@@ -238,13 +338,13 @@ function Admin() {
                         <td className="px-4 py-2 text-slate-300">{d.primarySpecialization}</td>
                         <td className="px-4 py-2 text-slate-400">{d.hospitalName || "-"}</td>
                         <td className="px-4 py-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${linkedUser?.isSuspended ? "bg-red-500/10 text-red-300 border border-red-500/40" : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"}`}>{linkedUser?.isSuspended ? "Suspended" : "Active"}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${linkedUserObj?.isSuspended ? "bg-red-500/10 text-red-300 border border-red-500/40" : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"}`}>{linkedUserObj?.isSuspended ? "Suspended" : "Active"}</span>
                         </td>
                         <td className="px-4 py-2">
                           {userId && (
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => suspendMutation.mutate({ id: userId, action: linkedUser?.isSuspended ? "unsuspend" : "suspend" })} className={`px-3 py-1 rounded-full text-xs border ${linkedUser?.isSuspended ? "border-emerald-400 text-emerald-300 hover:bg-emerald-500/10" : "border-yellow-400 text-yellow-300 hover:bg-yellow-500/10"}`}>
-                                {linkedUser?.isSuspended ? "Unsuspend" : "Suspend"}
+                              <button onClick={() => suspendMutation.mutate({ id: userId, action: linkedUserObj?.isSuspended ? "unsuspend" : "suspend" })} className={`px-3 py-1 rounded-full text-xs border ${linkedUserObj?.isSuspended ? "border-emerald-400 text-emerald-300 hover:bg-emerald-500/10" : "border-yellow-400 text-yellow-300 hover:bg-yellow-500/10"}`}>
+                                {linkedUserObj?.isSuspended ? "Unsuspend" : "Suspend"}
                               </button>
                               <button
                                 onClick={() => {

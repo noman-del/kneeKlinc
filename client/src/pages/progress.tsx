@@ -141,10 +141,7 @@ ${analysis.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join("\n")}
                 <CardContent>
                   <p className="text-4xl font-bold text-white">{analyses[0].riskScore}%</p>
                   <div className="w-full bg-slate-700 rounded-full h-2 mt-4">
-                    <div
-                      className="bg-gradient-to-r from-emerald-500 to-yellow-500 h-2 rounded-full"
-                      style={{ width: `${analyses[0].riskScore}%` }}
-                    ></div>
+                    <div className="bg-gradient-to-r from-emerald-500 to-yellow-500 h-2 rounded-full" style={{ width: `${analyses[0].riskScore}%` }}></div>
                   </div>
                 </CardContent>
               </Card>
@@ -171,19 +168,12 @@ ${analysis.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join("\n")}
               <CardContent>
                 <div className="space-y-4">
                   {analyses.map((analysis) => (
-                    <div
-                      key={analysis.id}
-                      className="bg-slate-700/30 border border-slate-600 rounded-lg p-6 hover:bg-slate-700/50 transition-all"
-                    >
+                    <div key={analysis.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-6 hover:bg-slate-700/50 transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-3">
-                            <span className={`px-4 py-2 rounded-full text-sm font-bold border ${getGradeColor(analysis.klGrade)}`}>
-                              KL Grade {analysis.klGrade}
-                            </span>
-                            <span className="text-slate-400 text-sm">
-                              {new Date(analysis.analysisDate).toLocaleDateString()}
-                            </span>
+                            <span className={`px-4 py-2 rounded-full text-sm font-bold border ${getGradeColor(analysis.klGrade)}`}>KL Grade {analysis.klGrade}</span>
+                            <span className="text-slate-400 text-sm">{new Date(analysis.analysisDate).toLocaleDateString()}</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
@@ -196,9 +186,7 @@ ${analysis.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join("\n")}
                             </div>
                             <div>
                               <p className="text-slate-400 text-xs mb-1">OA Status</p>
-                              <p className={`font-medium ${analysis.oaStatus ? "text-yellow-400" : "text-emerald-400"}`}>
-                                {analysis.oaStatus ? "Detected" : "Not Detected"}
-                              </p>
+                              <p className={`font-medium ${analysis.oaStatus ? "text-yellow-400" : "text-emerald-400"}`}>{analysis.oaStatus ? "Detected" : "Not Detected"}</p>
                             </div>
                           </div>
                           {selectedAnalysis?.id === analysis.id && (
@@ -216,20 +204,11 @@ ${analysis.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join("\n")}
                           )}
                         </div>
                         <div className="flex flex-col space-y-2 ml-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedAnalysis(selectedAnalysis?.id === analysis.id ? null : analysis)}
-                            className="border-slate-600 text-white hover:bg-slate-700"
-                          >
+                          <Button size="sm" variant="outline" onClick={() => setSelectedAnalysis(selectedAnalysis?.id === analysis.id ? null : analysis)} className="border-slate-600 text-white bg-transparent hover:bg-slate-700 hover:text-white">
                             <Eye className="w-4 h-4 mr-1" />
                             {selectedAnalysis?.id === analysis.id ? "Hide" : "View"}
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => downloadReport(analysis)}
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                          >
+                          <Button size="sm" onClick={() => downloadReport(analysis)} className="bg-indigo-600 hover:bg-indigo-700">
                             <Download className="w-4 h-4 mr-1" />
                             Download
                           </Button>
