@@ -339,6 +339,179 @@ export function registerAIRoutes(app: Express) {
   });
 
   /**
+   * GET /api/ai/doctor/patient-analyses
+   * Get all saved AI analyses for patients who have appointments with the authenticated doctor
+   */
+  app.get("/api/ai/doctor/patient-analyses", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (req.user?.userType !== "doctor") {
+        return res.status(403).json({ message: "Only doctors can access patient analyses" });
+      }
+
+      const doctorUserId = req.user!.id;
+      const { Doctor, Patient } = await import("@shared/schema");
+
+      const doctorProfile = await Doctor.findOne({ userId: doctorUserId });
+      if (!doctorProfile) {
+        return res.json({ analyses: [] });
+      }
+
+      // Find all appointments for this doctor
+      const appointments = await Appointment.find({ doctorId: doctorProfile._id }).select("patientId");
+      if (appointments.length === 0) {
+        return res.json({ analyses: [] });
+      }
+
+      const uniquePatientIds = Array.from(new Set(appointments.map((a: any) => String(a.patientId)).filter(Boolean)));
+
+      // Resolve patients -> userIds
+      const patients = await Patient.find({ _id: { $in: uniquePatientIds } }).populate("userId", "firstName lastName email");
+
+      const userIdToPatient: Record<string, { name: string; email?: string }> = {};
+      for (const p of patients as any[]) {
+        const user: any = p.userId;
+        if (!user?._id) continue;
+        const name = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Patient";
+        userIdToPatient[String(user._id)] = {
+          name,
+          email: user.email,
+        };
+      }
+
+      const userIds = Object.keys(userIdToPatient);
+      if (userIds.length === 0) {
+        return res.json({ analyses: [] });
+      }
+
+      const analyses = await AIAnalysis.find({ patientId: { $in: userIds }, isSavedToProfile: true }).sort({ createdAt: -1 });
+
+      const result = analyses.map((a: any) => {
+        const patientMeta = userIdToPatient[String(a.patientId)] || { name: "Patient" };
+        return {
+          id: a._id,
+          patientUserId: a.patientId,
+          patientName: patientMeta.name,
+          patientEmail: patientMeta.email,
+          klGrade: a.klGrade,
+          severity: a.severity,
+          riskScore: a.riskScore,
+          oaStatus: a.oaStatus,
+          recommendations: a.recommendations,
+          xrayImageUrl: a.xrayImageUrl,
+          analysisDate: a.analysisDate,
+          createdAt: a.createdAt,
+        };
+      });
+
+      res.json({ analyses: result });
+    } catch (error) {
+      console.error("Fetch doctor patient analyses error:", error);
+      res.status(500).json({ message: "Failed to fetch patient analyses" });
+    }
+  });
+
+  /**
+   * POST /api/doctor/analyses/:id/recommendations
+   * Doctor edits patient-specific recommendations for a given AI analysis.
+   * This updates DoctorRecommendation and the patient's PatientRecommendationProfile,
+   * but never touches DefaultRecommendation.
+   */
+  app.post("/api/doctor/analyses/:id/recommendations", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (req.user?.userType !== "doctor") {
+        return res.status(403).json({ message: "Only doctors can edit patient recommendations" });
+      }
+
+      const { id } = req.params;
+      const doctorUserId = req.user!.id;
+
+      const { Doctor, Patient } = await import("@shared/schema");
+
+      const doctorDoc = await Doctor.findOne({ userId: doctorUserId });
+      if (!doctorDoc) {
+        return res.status(404).json({ message: "Doctor profile not found" });
+      }
+
+      const analysis = await AIAnalysis.findById(id);
+      if (!analysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      const payloadSchema = z.object({
+        recommendations: z.array(z.string()).min(1),
+        doctorNotes: z.string().optional(),
+      });
+
+      const payload = payloadSchema.parse(req.body);
+
+      // Resolve or create Patient profile (schema Patient references userId)
+      let patientDoc = await Patient.findOne({ userId: analysis.patientId });
+      if (!patientDoc) {
+        patientDoc = await Patient.create({ userId: analysis.patientId });
+      }
+
+      // Upsert doctor-specific recommendation record
+      const doctorRecommendation = await DoctorRecommendation.findOneAndUpdate(
+        {
+          aiAnalysisId: analysis._id,
+          doctorId: doctorDoc._id,
+          patientId: patientDoc._id,
+        },
+        {
+          aiAnalysisId: analysis._id,
+          doctorId: doctorDoc._id,
+          patientId: patientDoc._id,
+          originalRecommendations: analysis.recommendations,
+          editedRecommendations: payload.recommendations,
+          doctorNotes: payload.doctorNotes,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      // Update the patient's saved recommendation profile used on home/progress pages
+      const patientProfile = await PatientRecommendationProfile.findOneAndUpdate(
+        { userId: analysis.patientId },
+        {
+          userId: analysis.patientId,
+          klGrade: analysis.klGrade,
+          label: undefined,
+          recommendations: payload.recommendations,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      // Also update this specific AI analysis so patient's history shows edited recs
+      analysis.recommendations = payload.recommendations;
+      await analysis.save();
+
+      res.status(200).json({
+        message: "Patient recommendations updated successfully",
+        doctorRecommendation: {
+          id: doctorRecommendation._id,
+          aiAnalysisId: doctorRecommendation.aiAnalysisId,
+          doctorId: doctorRecommendation.doctorId,
+          patientId: doctorRecommendation.patientId,
+          editedRecommendations: doctorRecommendation.editedRecommendations,
+          doctorNotes: doctorRecommendation.doctorNotes,
+        },
+        patientProfile: patientProfile
+          ? {
+              id: patientProfile._id,
+              klGrade: patientProfile.klGrade,
+              recommendations: patientProfile.recommendations,
+            }
+          : null,
+      });
+    } catch (error) {
+      console.error("Doctor edit recommendations error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update recommendations" });
+    }
+  });
+
+  /**
    * POST /api/ai/analyses/:id/save-to-profile
    * Mark an analysis as saved to profile/progress for the authenticated user
    */
