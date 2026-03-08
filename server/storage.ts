@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations (IMPORTANT - mandatory for Replit Auth)
   getUser(id: string): Promise<IUser | undefined>;
   upsertUser(user: UpsertUser): Promise<IUser>;
 

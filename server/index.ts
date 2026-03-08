@@ -2,12 +2,22 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { connectDB } from "./db";
 import { emailService } from "./services/emailService";
 
 const app = express();
+
+// Enable CORS for mobile app and web requests
+app.use(
+  cors({
+    origin: ["http://localhost:8081", "http://localhost:19000", "http://192.168.0.116:8081"],
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -184,9 +194,10 @@ function startVirtualVisitReminderJob() {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(port, "localhost", () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`🚀 Server running on http://localhost:${port}`);
     log(`📱 Frontend: http://localhost:${port}`);
     log(`🔗 API: http://localhost:${port}/api`);
+    log(`📱 Mobile (Network): http://192.168.0.116:${port}/api`);
   });
 })();

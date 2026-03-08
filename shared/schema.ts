@@ -12,6 +12,8 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   isSuspended?: boolean;
   lastLoginAt?: Date;
+  resetPasswordOTP?: string;
+  resetPasswordOTPExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -118,10 +120,12 @@ const userSchema = new Schema<IUser>(
     isEmailVerified: { type: Boolean, default: false },
     isSuspended: { type: Boolean, default: false },
     lastLoginAt: Date,
+    resetPasswordOTP: String,
+    resetPasswordOTPExpiry: Date,
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Doctor Schema
@@ -150,7 +154,7 @@ const doctorSchema = new Schema<IDoctor>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Patient Schema
@@ -175,7 +179,7 @@ const patientSchema = new Schema<IPatient>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Patient Symptoms Schema
@@ -191,7 +195,7 @@ const patientSymptomsSchema = new Schema<IPatientSymptoms>(
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  }
+  },
 );
 
 // Patient Injuries Schema
@@ -205,7 +209,7 @@ const patientInjuriesSchema = new Schema<IPatientInjuries>(
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  }
+  },
 );
 
 // OTP Verification Schema
@@ -227,7 +231,7 @@ const otpVerificationSchema = new Schema<IOTPVerification>(
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
-  }
+  },
 );
 
 // Index for automatic deletion of expired OTPs (server-side only)

@@ -199,7 +199,7 @@ export function registerAIRoutes(app: Express) {
         console.error("AI analysis error:", error);
         res.status(500).json({ message: "Failed to analyze X-ray" });
       }
-    }
+    },
   );
 
   // ==================== CHAT ATTACHMENT ROUTES ====================
@@ -287,7 +287,7 @@ export function registerAIRoutes(app: Express) {
           label: payload.label,
           recommendations: payload.recommendations,
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       res.status(201).json({
@@ -465,7 +465,7 @@ export function registerAIRoutes(app: Express) {
           editedRecommendations: payload.recommendations,
           doctorNotes: payload.doctorNotes,
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       // Update the patient's saved recommendation profile used on home/progress pages
@@ -477,7 +477,7 @@ export function registerAIRoutes(app: Express) {
           label: undefined,
           recommendations: payload.recommendations,
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       // Also update this specific AI analysis so patient's history shows edited recs
@@ -1103,6 +1103,7 @@ export function registerAIRoutes(app: Express) {
               if (d) {
                 const nameParts = [d.title, d.firstName, d.lastName].filter(Boolean);
                 doctorMeta = {
+                  doctorUserId: d.userId ? d.userId.toString() : undefined,
                   doctorName: nameParts.join(" ") || undefined,
                   doctorSpecialization: d.primarySpecialization || undefined,
                   doctorExperience: d.yearsOfExperience ? `${d.yearsOfExperience}` : undefined,
@@ -1172,7 +1173,7 @@ export function registerAIRoutes(app: Express) {
               ...doctorMeta,
               ...patientMeta,
             };
-          })
+          }),
         ),
       });
     } catch (error) {
@@ -1310,8 +1311,28 @@ export function registerAIRoutes(app: Express) {
 
       // Original appointment start and end datetime
       const originalStart = new Date(appointment.appointmentDate);
-      const [origHourStr, origMinStr] = (appointment.appointmentTime || "00:00").split(":");
-      originalStart.setHours(parseInt(origHourStr || "0", 10), parseInt(origMinStr || "0", 10), 0, 0);
+      const origTime = appointment.appointmentTime || "00:00";
+
+      // Parse time with AM/PM support
+      const parseTime = (timeStr: string) => {
+        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+        if (!match) return { hours: 0, minutes: 0 };
+
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3]?.toUpperCase();
+
+        if (period === "PM" && hours !== 12) {
+          hours += 12;
+        } else if (period === "AM" && hours === 12) {
+          hours = 0;
+        }
+
+        return { hours, minutes };
+      };
+
+      const { hours: origHours, minutes: origMinutes } = parseTime(origTime);
+      originalStart.setHours(origHours, origMinutes, 0, 0);
 
       const durationMinutes = typeof appointment.duration === "number" && !isNaN(appointment.duration) ? appointment.duration : 30;
       const originalEnd = new Date(originalStart.getTime() + durationMinutes * 60 * 1000);
@@ -1323,8 +1344,8 @@ export function registerAIRoutes(app: Express) {
 
       // New appointment datetime
       const newDate = new Date(validatedData.appointmentDate);
-      const [newHourStr, newMinStr] = (validatedData.appointmentTime || "00:00").split(":");
-      newDate.setHours(parseInt(newHourStr || "0", 10), parseInt(newMinStr || "0", 10), 0, 0);
+      const { hours: newHours, minutes: newMinutes } = parseTime(validatedData.appointmentTime || "00:00");
+      newDate.setHours(newHours, newMinutes, 0, 0);
 
       if (isNaN(newDate.getTime())) {
         return res.status(400).json({ message: "Invalid new appointment date/time" });
@@ -1972,7 +1993,7 @@ export function registerAIRoutes(app: Express) {
         doctorProfiles.map((d: any) => ({
           name: `${d.firstName} ${d.lastName}`,
           specialization: d.primarySpecialization,
-        }))
+        })),
       );
 
       res.json({
@@ -2032,7 +2053,7 @@ export function registerAIRoutes(app: Express) {
             likedByCurrentUser,
             isOwner,
           };
-        })
+        }),
       );
 
       res.json({ posts: responsePosts });

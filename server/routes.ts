@@ -10,6 +10,7 @@ import path from "path";
 import fs from "fs";
 import { registerAIRoutes } from "./routes-ai";
 import { otpService } from "./services/otpService";
+import { emailService } from "./services/emailService";
 import { Appointment, AIAnalysis } from "@shared/additional-schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -282,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: error instanceof Error ? error.message : "Unknown error",
         });
       }
-    }
+    },
   );
 
   // Delete profile picture route
@@ -352,6 +353,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Password change error:", error);
       res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Forgot Password - Send OTP
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ message: "If an account exists with this email, you will receive a password reset code." });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      // Store OTP in user document
+      user.resetPasswordOTP = otp;
+      user.resetPasswordOTPExpiry = otpExpiry;
+      await user.save();
+
+      // Send OTP via email
+      await emailService.sendPasswordResetOTP(email, otp);
+
+      res.json({ message: "Password reset code sent to your email" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  // Verify Reset OTP
+  app.post("/api/auth/verify-reset-otp", async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user || !user.resetPasswordOTP || !user.resetPasswordOTPExpiry) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      if (user.resetPasswordOTP !== otp) {
+        return res.status(400).json({ message: "Invalid reset code" });
+      }
+
+      if (new Date() > user.resetPasswordOTPExpiry) {
+        return res.status(400).json({ message: "Reset code has expired" });
+      }
+
+      res.json({ message: "Reset code verified successfully" });
+    } catch (error) {
+      console.error("Verify reset OTP error:", error);
+      res.status(500).json({ message: "Failed to verify reset code" });
+    }
+  });
+
+  // Reset Password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+
+      if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: "Email, OTP, and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user || !user.resetPasswordOTP || !user.resetPasswordOTPExpiry) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      if (user.resetPasswordOTP !== otp) {
+        return res.status(400).json({ message: "Invalid reset code" });
+      }
+
+      if (new Date() > user.resetPasswordOTPExpiry) {
+        return res.status(400).json({ message: "Reset code has expired" });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+      user.password = hashedPassword;
+
+      // Clear reset OTP fields
+      user.resetPasswordOTP = undefined;
+      user.resetPasswordOTPExpiry = undefined;
+      await user.save();
+
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 

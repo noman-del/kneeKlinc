@@ -15,6 +15,9 @@ export default function Home() {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState<string | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
+  const [doctorAnalyses, setDoctorAnalyses] = useState<any[]>([]);
+  const [isLoadingDoctorAnalyses, setIsLoadingDoctorAnalyses] = useState(false);
+  const [doctorAnalysesError, setDoctorAnalysesError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPersonalRecommendations = async () => {
@@ -87,6 +90,65 @@ export default function Home() {
 
     fetchRecentAnalyses();
   }, [isPatient]);
+
+  useEffect(() => {
+    const fetchDoctorAnalyses = async () => {
+      if (!isDoctor) return;
+      try {
+        setIsLoadingDoctorAnalyses(true);
+        setDoctorAnalysesError(null);
+
+        const token = localStorage.getItem("token");
+        const response = await fetch("/api/ai/doctor/patient-analyses", {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 403 || response.status === 404) {
+            setDoctorAnalyses([]);
+            return;
+          }
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.message || "Failed to load patient analyses");
+        }
+
+        const data = await response.json();
+        if (Array.isArray(data?.analyses)) {
+          setDoctorAnalyses(data.analyses);
+        } else {
+          setDoctorAnalyses([]);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load patient analyses";
+        setDoctorAnalysesError(message);
+      } finally {
+        setIsLoadingDoctorAnalyses(false);
+      }
+    };
+
+    fetchDoctorAnalyses();
+  }, [isDoctor]);
+
+  const doctorUniquePatientsCount = isDoctor ? new Set(doctorAnalyses.map((a: any) => a.patientUserId)).size : 0;
+  const doctorTotalAnalyses = isDoctor ? doctorAnalyses.length : 0;
+  const doctorHighRiskCount = isDoctor ? doctorAnalyses.filter((a: any) => typeof a.riskScore === "number" && a.riskScore >= 70).length : 0;
+  const doctorSevereGradeCount = isDoctor
+    ? doctorAnalyses.filter((a: any) => {
+        const gradeNum = typeof a.klGrade === "string" ? parseInt(a.klGrade, 10) : Number(a.klGrade);
+        return !isNaN(gradeNum) && gradeNum >= 3;
+      }).length
+    : 0;
+  const doctorSevereGradePercentage = doctorTotalAnalyses ? Math.round((doctorSevereGradeCount / doctorTotalAnalyses) * 100) : 0;
+  const doctorLatestAnalysisDateLabel = (() => {
+    if (!isDoctor || doctorAnalyses.length === 0) return "No recent assessments";
+    const latest = doctorAnalyses[0];
+    if (!latest?.analysisDate) return "No recent assessments";
+    const d = new Date(latest.analysisDate);
+    if (isNaN(d.getTime())) return "No recent assessments";
+    return d.toLocaleDateString();
+  })();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -254,7 +316,60 @@ export default function Home() {
               </div>
 
               <div className="space-y-4 flex-1 max-h-80 overflow-y-auto pr-2">
-                {isPatient && recentAnalyses.length > 0 ? (
+                {isDoctor ? (
+                  <>
+                    {doctorAnalysesError && <div className="mb-2 text-xs text-red-300">{doctorAnalysesError}</div>}
+                    {isLoadingDoctorAnalyses ? (
+                      <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Brain className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white text-base">Loading patient assessments...</h3>
+                            <p className="text-white/70 text-sm">Please wait while we fetch recent AI assessments for your patients.</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : doctorAnalyses.length > 0 ? (
+                      doctorAnalyses.map((a: any, idx: number) => {
+                        const date = a.analysisDate ? new Date(a.analysisDate) : null;
+                        const dateLabel = date ? date.toLocaleDateString() : "";
+                        const subtitle = `KL Grade ${a.klGrade} • ${a.severity} OA • Risk ${a.riskScore}%`;
+                        return (
+                          <div key={a.id || idx} className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <Brain className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-white text-base" data-testid="text-assessment-title">
+                                  {a.patientName || "Patient"}
+                                </h3>
+                                <p className="text-white/70 text-sm" data-testid="text-assessment-details">
+                                  {subtitle}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-white/60 text-xs">{dateLabel}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex items-center justify-between p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Brain className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white text-base">No patient assessments</h3>
+                            <p className="text-white/70 text-sm">Once your patients complete and save AI analyses, they will appear here.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : isPatient && recentAnalyses.length > 0 ? (
                   recentAnalyses.map((a, idx) => {
                     const date = a.analysisDate ? new Date(a.analysisDate) : null;
                     const dateLabel = date ? date.toLocaleDateString() : "";
@@ -314,21 +429,21 @@ export default function Home() {
                         <Brain className="text-slate-300 w-6 h-6" />
                         <span className="font-semibold text-white text-lg">AI Insights</span>
                       </div>
-                      <p className="text-white/80 leading-relaxed">15% increase in Grade 3 OA cases this month. Consider preventive care protocols.</p>
+                      <p className="text-white/80 leading-relaxed">{doctorTotalAnalyses > 0 ? `${doctorSevereGradePercentage}% of your saved assessments are KL Grade 3 or higher across ${doctorUniquePatientsCount} patients.` : "Once your patients have saved AI assessments, you'll see grade distribution insights here."}</p>
                     </div>
                     <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
                       <div className="flex items-center space-x-3 mb-3">
                         <Heart className="text-blue-300 w-6 h-6" />
                         <span className="font-semibold text-white text-lg">Patient Outcomes</span>
                       </div>
-                      <p className="text-white/80 leading-relaxed">Patients with IoT monitoring show 30% better adherence rates.</p>
+                      <p className="text-white/80 leading-relaxed">{doctorTotalAnalyses > 0 ? `${doctorHighRiskCount} of your patients are currently flagged as high risk (risk score ≥ 70%).` : "High-risk patient counts will be highlighted here once assessments are available."}</p>
                     </div>
                     <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300">
                       <div className="flex items-center space-x-3 mb-3">
                         <Activity className="text-orange-300 w-6 h-6" />
                         <span className="font-semibold text-white text-lg">Patient Activity</span>
                       </div>
-                      <p className="text-white/80 leading-relaxed">Patients with regular physical activity show 25% better OA management.</p>
+                      <p className="text-white/80 leading-relaxed">{doctorTotalAnalyses > 0 ? `Most recent saved assessment was on ${doctorLatestAnalysisDateLabel}.` : "As patients progress through treatment, the latest assessment date will appear here."}</p>
                     </div>
                   </>
                 ) : (

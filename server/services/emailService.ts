@@ -478,6 +478,60 @@ KneeKlinic Team
     `.trim();
   }
 
+  // Send password reset OTP email
+  async sendPasswordResetOTP(email: string, otp: string): Promise<void> {
+    if (!this.transporter || !this.isConfigured) {
+      console.warn("Email service not configured - skipping password reset OTP email");
+      return;
+    }
+
+    try {
+      const subject = "Reset Your KneeKlinic Password";
+      const text = `
+You requested to reset your KneeKlinic password.
+
+Your password reset code is:
+
+${otp}
+
+This code will expire in 10 minutes.
+
+If you didn't request this password reset, please ignore this email and your password will remain unchanged.
+
+Best regards,
+KneeKlinic Team
+      `.trim();
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #3b82f6;">Reset Your Password</h2>
+          <p>You requested to reset your KneeKlinic password.</p>
+          <p>Your password reset code is:</p>
+          <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
+          <p style="color: #6b7280; font-size: 14px;">If you didn't request this password reset, please ignore this email and your password will remain unchanged.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+          <p style="color: #9ca3af; font-size: 12px;">Best regards,<br>KneeKlinic Team</p>
+        </div>
+      `;
+
+      await this.transporter.sendMail({
+        from: `"KneeKlinic" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject,
+        text,
+        html,
+      });
+
+      console.log(`✅ Password reset OTP sent to: ${email}`);
+    } catch (error) {
+      console.error("❌ Failed to send password reset OTP:", error);
+      throw error;
+    }
+  }
+
   // Test method for development
   async testEmailConfiguration(): Promise<{ success: boolean; message: string }> {
     if (!this.isConfigured) {
