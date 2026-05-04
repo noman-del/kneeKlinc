@@ -11,6 +11,7 @@ interface PatientAnalysisBase {
   oaStatus: boolean;
   recommendations: string[];
   xrayImageUrl: string;
+  gradCamUrl?: string | null;
   analysisDate: string;
   createdAt: string;
 }
@@ -88,7 +89,7 @@ export default function Progress() {
       case "0":
         return "text-emerald-400 bg-emerald-900/30 border-emerald-700";
       case "1":
-        return "text-green-400 bg-green-900/30 border-green-700";
+        return "text-emerald-500 bg-emerald-900/30 border-emerald-700";
       case "2":
         return "text-yellow-400 bg-yellow-900/30 border-yellow-700";
       case "3":
@@ -96,7 +97,7 @@ export default function Progress() {
       case "4":
         return "text-red-400 bg-red-900/30 border-red-700";
       default:
-        return "text-slate-400 bg-slate-900/30 border-slate-700";
+        return "text-tm bg-surface/30 border-bd";
     }
   };
 
@@ -192,28 +193,28 @@ ${analysis.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-6">
+    <div className="min-h-screen bg-page p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">{userType === "doctor" ? "Patient Analysis Overview" : "Progress Dashboard"}</h1>
-          <p className="text-slate-300">{userType === "doctor" ? "Review AI analysis history for your patients" : "Track your knee health journey over time"}</p>
+          <h1 className="text-3xl font-bold text-th mb-1 tracking-tight">{userType === "doctor" ? "Patient Analysis Overview" : "Progress Dashboard"}</h1>
+          <p className="text-tm">{userType === "doctor" ? "Review AI analysis history for your patients" : "Track your knee health journey over time"}</p>
         </div>
 
         {loading ? (
-          <p className="text-slate-400">Loading your progress...</p>
+          <p className="text-tm">Loading your progress...</p>
         ) : userType === "doctor" ? (
           doctorAnalyses.length === 0 ? (
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-surface border-bd">
               <CardContent className="text-center py-12">
-                <Activity className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400 mb-2">No patient analyses available yet</p>
-                <p className="text-slate-500 text-sm">Patient AI analyses will appear here once they save their results to progress.</p>
+                <Activity className="w-12 h-12 text-tm mx-auto mb-4" />
+                <p className="text-tm mb-2">No patient analyses available yet</p>
+                <p className="text-tm text-sm">Patient AI analyses will appear here once they save their results to progress.</p>
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-slate-800/60 border-slate-700/80 shadow-2xl shadow-black/40">
+            <Card className="bg-surface border-bd">
               <CardHeader>
-                <CardTitle className="text-white">Analysis History</CardTitle>
+                <CardTitle className="text-th">Analysis History</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -225,30 +226,30 @@ ${analysis.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}
                       return acc;
                     }, [])
                     .map((analysis) => (
-                      <div key={analysis.id} className="bg-slate-900/70 border border-slate-700/80 rounded-2xl px-5 py-4 space-y-4">
+                      <div key={analysis.id} className="bg-surface-alt border border-bd rounded-lg px-5 py-4 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-3 mb-2">
-                              <span className="px-3 py-1.5 rounded-full text-xs font-semibold border bg-slate-800/80 text-emerald-300 border-emerald-500/60">{analysis.patientName}</span>
+                              <span className="px-3 py-1.5 rounded-full text-xs font-semibold border bg-ac-muted text-ac border-ac/30">{analysis.patientName}</span>
                               <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getGradeColor(analysis.klGrade)}`}>KL Grade {analysis.klGrade}</span>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div>
-                                <p className="text-slate-400 text-xs mb-1">Severity</p>
-                                <p className="text-white font-medium text-sm">{analysis.severity}</p>
+                                <p className="text-tm text-xs mb-1">Severity</p>
+                                <p className="text-th font-medium text-sm">{analysis.severity}</p>
                               </div>
                               <div>
-                                <p className="text-slate-400 text-xs mb-1">Risk Score</p>
-                                <p className="text-white font-medium text-sm">{analysis.riskScore}%</p>
+                                <p className="text-tm text-xs mb-1">Risk Score</p>
+                                <p className="text-th font-medium text-sm">{analysis.riskScore}%</p>
                               </div>
                               <div>
-                                <p className="text-slate-400 text-xs mb-1">OA Status</p>
+                                <p className="text-tm text-xs mb-1">OA Status</p>
                                 <p className={`font-medium text-sm ${analysis.oaStatus ? "text-yellow-400" : "text-emerald-400"}`}>{analysis.oaStatus ? "Detected" : "Not Detected"}</p>
                               </div>
                             </div>
                           </div>
                           <div className="flex flex-col items-stretch gap-2 min-w-[170px]">
-                            <Button size="sm" variant="outline" onClick={() => startEditingDoctorAnalysis(analysis)} className="border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 hover:text-white text-xs">
+                            <Button size="sm" variant="outline" onClick={() => startEditingDoctorAnalysis(analysis)} className="border-bd bg-surface-alt text-ts hover:bg-surface hover:text-th text-xs">
                               <Eye className="w-4 h-4 mr-1" />
                               {selectedAnalysis?.id === analysis.id ? "Hide Editor" : "View & Edit Recommendations"}
                             </Button>
@@ -256,38 +257,72 @@ ${analysis.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}
                         </div>
 
                         {selectedAnalysis?.id === analysis.id && (
-                          <div className="mt-2 rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-4">
-                            {doctorRecsError && <p className="text-xs text-red-400 mb-2">{doctorRecsError}</p>}
-                            {doctorRecsSuccess && !doctorRecsError && <p className="text-xs text-emerald-400 mb-2">{doctorRecsSuccess}</p>}
-                            <p className="text-slate-200 text-sm mb-3 font-medium">Edit lifestyle recommendations for this patient:</p>
-                            <div className="space-y-3 mb-3">
-                              {editableRecommendations.map((rec, idx) => (
-                                <div key={idx} className="flex items-center gap-3">
-                                  <div className="flex-1 bg-slate-800 border border-slate-700 rounded-full px-4 py-3 flex items-center">
-                                    <textarea
-                                      value={rec}
-                                      onChange={(e) => {
-                                        const next = editableRecommendations.slice();
-                                        next[idx] = e.target.value;
-                                        setEditableRecommendations(next);
-                                      }}
-                                      className="w-full bg-transparent text-sm text-slate-100 resize-none leading-snug outline-none"
-                                      rows={1}
-                                    />
+                          <div className="mt-2 rounded-lg border border-bd bg-surface px-4 py-4 space-y-4">
+                            {/* X-ray and Heatmap Display */}
+                            <div className="p-4 bg-surface-alt border border-bd rounded-lg">
+                              <h4 className="text-th font-semibold mb-3">AI Analysis Images</h4>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {/* Original X-ray */}
+                                <div className="bg-surface border border-bd rounded-lg p-3">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <Eye className="w-4 h-4 text-ac" />
+                                    <h5 className="font-medium text-th text-sm">Original X-Ray</h5>
                                   </div>
-                                  <Button type="button" size="icon" variant="outline" onClick={() => setEditableRecommendations((prev) => prev.filter((_, i) => i !== idx))} className="h-8 w-8 rounded-full border-slate-500 bg-slate-100 text-slate-800 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center">
-                                    ×
-                                  </Button>
+                                  <div className="relative bg-surface-alt rounded overflow-hidden">
+                                    <img src={analysis.xrayImageUrl} alt="Original Knee X-Ray" className="w-full h-auto max-h-48 object-contain" />
+                                  </div>
                                 </div>
-                              ))}
+
+                                {/* Heatmap */}
+                                {analysis.gradCamUrl && (
+                                  <div className="bg-surface border border-bd rounded-lg p-3">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Activity className="w-4 h-4 text-ac" />
+                                      <h5 className="font-medium text-th text-sm">AI Diagnostic Heatmap</h5>
+                                    </div>
+                                    <div className="relative bg-surface-alt rounded overflow-hidden">
+                                      <img src={analysis.gradCamUrl} alt="Grad-CAM Heatmap" className="w-full h-auto max-h-48 object-contain border-2 border-blue-500/30" />
+                                    </div>
+                                    <p className="text-xs text-tm mt-2">Red areas show AI focus regions</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <Button type="button" size="sm" variant="outline" onClick={() => setEditableRecommendations((prev) => [...prev, ""])} className="rounded-full px-4 border-slate-500 bg-slate-100 text-slate-900 hover:bg-slate-200 text-xs">
-                                + Add Recommendation
-                              </Button>
-                              <Button type="button" size="sm" onClick={saveDoctorRecommendations} disabled={savingDoctorRecs || editableRecommendations.some((r) => !r.trim())} className="rounded-full px-5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs disabled:opacity-60">
-                                {savingDoctorRecs ? "Saving..." : "Save Changes"}
-                              </Button>
+
+                            {/* Recommendations Editor */}
+                            <div>
+                              {doctorRecsError && <p className="text-xs text-red-400 mb-2">{doctorRecsError}</p>}
+                              {doctorRecsSuccess && !doctorRecsError && <p className="text-xs text-emerald-400 mb-2">{doctorRecsSuccess}</p>}
+                              <p className="text-ts text-sm mb-3 font-medium">Edit lifestyle recommendations for this patient:</p>
+                              <div className="space-y-3 mb-3">
+                                {editableRecommendations.map((rec, idx) => (
+                                  <div key={idx} className="flex items-center gap-3">
+                                    <div className="flex-1 bg-ib border border-ibr rounded-lg px-4 py-3 flex items-center">
+                                      <textarea
+                                        value={rec}
+                                        onChange={(e) => {
+                                          const next = editableRecommendations.slice();
+                                          next[idx] = e.target.value;
+                                          setEditableRecommendations(next);
+                                        }}
+                                        className="w-full bg-transparent text-sm text-th resize-none leading-snug outline-none"
+                                        rows={1}
+                                      />
+                                    </div>
+                                    <Button type="button" size="icon" variant="outline" onClick={() => setEditableRecommendations((prev) => prev.filter((_, i) => i !== idx))} className="h-8 w-8 rounded-lg border-bd bg-surface-alt text-tm hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 flex items-center justify-center">
+                                      ×
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <Button type="button" size="sm" variant="outline" onClick={() => setEditableRecommendations((prev) => [...prev, ""])} className="rounded-lg px-4 border-bd bg-surface-alt text-ts hover:bg-surface text-xs">
+                                  + Add Recommendation
+                                </Button>
+                                <Button type="button" size="sm" onClick={saveDoctorRecommendations} disabled={savingDoctorRecs || editableRecommendations.some((r) => !r.trim())} className="rounded-lg px-5 bg-ac hover:bg-ac-hover text-primary-foreground text-xs disabled:opacity-60">
+                                  {savingDoctorRecs ? "Saving..." : "Save Changes"}
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -298,11 +333,11 @@ ${analysis.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}
             </Card>
           )
         ) : analyses.length === 0 ? (
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-surface border-bd">
             <CardContent className="text-center py-12">
-              <Activity className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400 mb-4">No AI analyses yet</p>
-              <Button onClick={() => (window.location.href = "/xray-upload")} className="bg-indigo-600 hover:bg-indigo-700">
+              <Activity className="w-12 h-12 text-tm mx-auto mb-4" />
+              <p className="text-tm mb-4">No AI analyses yet</p>
+              <Button onClick={() => (window.location.href = "/xray-upload")} className="bg-ac hover:bg-ac-hover text-primary-foreground font-medium transition-colors duration-200">
                 Upload Your First X-ray
               </Button>
             </CardContent>
@@ -311,102 +346,136 @@ ${analysis.recommendations.map((rec: string, idx: number) => `${idx + 1}. ${rec}
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="bg-slate-800/50 border-slate-700">
+              <Card className="bg-surface border-bd">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <Activity className="w-5 h-5 mr-2" />
+                  <CardTitle className="text-th flex items-center">
+                    <Activity className="w-5 h-5 mr-2 text-ac" />
                     Latest Grade
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-4xl font-bold text-white">KL {analyses[0].klGrade}</p>
-                      <p className="text-slate-400 text-sm mt-1">{analyses[0].severity}</p>
+                      <p className="text-4xl font-bold text-th">KL {analyses[0].klGrade}</p>
+                      <p className="text-tm text-sm mt-1">{analyses[0].severity}</p>
                     </div>
                     {getTrendIcon()}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-800/50 border-slate-700">
+              <Card className="bg-surface border-bd">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <TrendingUp className="w-5 h-5 mr-2" />
+                  <CardTitle className="text-th flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2 text-ac" />
                     Risk Score
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold text-white">{analyses[0].riskScore}%</p>
-                  <div className="w-full bg-slate-700 rounded-full h-2 mt-4">
-                    <div className="bg-gradient-to-r from-emerald-500 to-yellow-500 h-2 rounded-full" style={{ width: `${analyses[0].riskScore}%` }}></div>
+                  <p className="text-4xl font-bold text-th">{analyses[0].riskScore}%</p>
+                  <div className="w-full bg-surface-alt rounded-full h-2 mt-4">
+                    <div className="bg-ac h-2 rounded-full" style={{ width: `${analyses[0].riskScore}%` }}></div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-800/50 border-slate-700">
+              <Card className="bg-surface border-bd">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <Calendar className="w-5 h-5 mr-2" />
+                  <CardTitle className="text-th flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-ac" />
                     Total Scans
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold text-white">{analyses.length}</p>
-                  <p className="text-slate-400 text-sm mt-1">Analyses completed</p>
+                  <p className="text-4xl font-bold text-th">{analyses.length}</p>
+                  <p className="text-tm text-sm mt-1">Analyses completed</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Analysis History */}
-            <Card className="bg-slate-800/50 border-slate-700">
+            <Card className="bg-surface border-bd">
               <CardHeader>
-                <CardTitle className="text-white">Analysis History</CardTitle>
+                <CardTitle className="text-th">Analysis History</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {analyses.map((analysis) => (
-                    <div key={analysis.id} className="bg-slate-700/30 border border-slate-600 rounded-lg p-6 hover:bg-slate-700/50 transition-all">
+                    <div key={analysis.id} className="bg-surface-alt border border-bd rounded-lg p-6 hover:border-bs transition-colors duration-200">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-3">
                             <span className={`px-4 py-2 rounded-full text-sm font-bold border ${getGradeColor(analysis.klGrade)}`}>KL Grade {analysis.klGrade}</span>
-                            <span className="text-slate-400 text-sm">{new Date(analysis.analysisDate).toLocaleDateString()}</span>
+                            <span className="text-tm text-sm">{new Date(analysis.analysisDate).toLocaleDateString()}</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
-                              <p className="text-slate-400 text-xs mb-1">Severity</p>
-                              <p className="text-white font-medium">{analysis.severity}</p>
+                              <p className="text-tm text-xs mb-1">Severity</p>
+                              <p className="text-th font-medium">{analysis.severity}</p>
                             </div>
                             <div>
-                              <p className="text-slate-400 text-xs mb-1">Risk Score</p>
-                              <p className="text-white font-medium">{analysis.riskScore}%</p>
+                              <p className="text-tm text-xs mb-1">Risk Score</p>
+                              <p className="text-th font-medium">{analysis.riskScore}%</p>
                             </div>
                             <div>
-                              <p className="text-slate-400 text-xs mb-1">OA Status</p>
+                              <p className="text-tm text-xs mb-1">OA Status</p>
                               <p className={`font-medium ${analysis.oaStatus ? "text-yellow-400" : "text-emerald-400"}`}>{analysis.oaStatus ? "Detected" : "Not Detected"}</p>
                             </div>
                           </div>
                           {selectedAnalysis?.id === analysis.id && (
-                            <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-                              <h4 className="text-white font-semibold mb-3">Recommendations:</h4>
-                              <ul className="space-y-2">
-                                {analysis.recommendations.map((rec, idx) => (
-                                  <li key={idx} className="text-slate-300 text-sm flex items-start">
-                                    <span className="text-indigo-400 mr-2">•</span>
-                                    {rec}
-                                  </li>
-                                ))}
-                              </ul>
+                            <div className="mt-4 space-y-4">
+                              {/* X-ray and Heatmap Display */}
+                              <div className="p-4 bg-surface border border-bd rounded-lg">
+                                <h4 className="text-th font-semibold mb-3">AI Analysis Images</h4>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                  {/* Original X-ray */}
+                                  <div className="bg-surface-alt border border-bd rounded-lg p-3">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Eye className="w-4 h-4 text-ac" />
+                                      <h5 className="font-medium text-th text-sm">Original X-Ray</h5>
+                                    </div>
+                                    <div className="relative bg-surface rounded overflow-hidden">
+                                      <img src={analysis.xrayImageUrl} alt="Original Knee X-Ray" className="w-full h-auto max-h-48 object-contain" />
+                                    </div>
+                                  </div>
+
+                                  {/* Heatmap */}
+                                  {analysis.gradCamUrl && (
+                                    <div className="bg-surface-alt border border-bd rounded-lg p-3">
+                                      <div className="flex items-center space-x-2 mb-2">
+                                        <Activity className="w-4 h-4 text-ac" />
+                                        <h5 className="font-medium text-th text-sm">AI Diagnostic Heatmap</h5>
+                                      </div>
+                                      <div className="relative bg-surface rounded overflow-hidden">
+                                        <img src={analysis.gradCamUrl} alt="Grad-CAM Heatmap" className="w-full h-auto max-h-48 object-contain border-2 border-blue-500/30" />
+                                      </div>
+                                      <p className="text-xs text-tm mt-2">Red areas show AI focus regions</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Recommendations */}
+                              <div className="p-4 bg-surface border border-bd rounded-lg">
+                                <h4 className="text-th font-semibold mb-3">Recommendations:</h4>
+                                <ul className="space-y-2">
+                                  {analysis.recommendations.map((rec, idx) => (
+                                    <li key={idx} className="text-ts text-sm flex items-start">
+                                      <span className="text-ac mr-2">•</span>
+                                      {rec}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
                             </div>
                           )}
                         </div>
                         <div className="flex flex-col space-y-2 ml-4">
-                          <Button size="sm" variant="outline" onClick={() => setSelectedAnalysis(selectedAnalysis?.id === analysis.id ? null : analysis)} className="border-slate-600 text-white bg-transparent hover:bg-slate-700 hover:text-white">
+                          <Button size="sm" variant="outline" onClick={() => setSelectedAnalysis(selectedAnalysis?.id === analysis.id ? null : analysis)} className="border-bd text-ts bg-surface-alt hover:bg-surface hover:text-th">
                             <Eye className="w-4 h-4 mr-1" />
                             {selectedAnalysis?.id === analysis.id ? "Hide" : "View"}
                           </Button>
-                          <Button size="sm" onClick={() => downloadReport(analysis)} className="bg-indigo-600 hover:bg-indigo-700">
+                          <Button size="sm" onClick={() => downloadReport(analysis)} className="bg-ac hover:bg-ac-hover text-primary-foreground transition-colors duration-200">
                             <Download className="w-4 h-4 mr-1" />
                             Download
                           </Button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { useAuth } from "@/hooks/useAuth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,31 +13,39 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Stethoscope } from "lucide-react";
+import { Stethoscope, Plus, Trash2 } from "lucide-react";
 
 const doctorFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   // firstName, lastName, email already collected in signup - removed
   gender: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  medicalLicenseNumber: z.string().min(1, "Medical license number is required"),
-  licenseState: z.string().min(1, "License state/country is required"),
-  deaNumber: z.string().optional(),
-  npiNumber: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .min(1, "Phone number is required")
+    .regex(/^(\+92|0)?3\d{9}$/, "Enter a valid Pakistani phone number (e.g. 03001234567)"),
+  medicalLicenseNumber: z
+    .string()
+    .min(1, "PMDC registration number is required")
+    .regex(/^\d{4,6}-[A-Z]$|^\d{5,6}$/, "Enter a valid PMDC number (e.g. 12345-M or 123456)"),
+  licenseState: z.string().min(1, "Registration province is required"),
   primarySpecialization: z.string().min(1, "Primary specialization is required"),
   subSpecialization: z.string().optional(),
   yearsOfExperience: z.string().optional(),
-  boardCertifications: z.string().optional(),
-  hospitalName: z.string().optional(),
-  department: z.string().optional(),
-  practiceAddress: z.string().optional(),
+  practiceLocations: z
+    .array(
+      z.object({
+        hospitalName: z.string().min(1, "Hospital name is required"),
+        department: z.string().optional(),
+        address: z.string().optional(),
+      }),
+    )
+    .min(1, "Add at least one practice location"),
   // Availability
   availableStartTime: z.string().min(1, "Start time is required"),
   availableEndTime: z.string().min(1, "End time is required"),
   slotDuration: z.string().default("30"),
   availableDays: z.array(z.number()).min(1, "Select at least one day"),
-  hipaaConsent: z.boolean().refine((val) => val === true, "HIPAA consent is required"),
   termsConsent: z.boolean().refine((val) => val === true, "Terms consent is required"),
   verificationConsent: z.boolean().refine((val) => val === true, "Verification consent is required"),
 });
@@ -69,23 +77,22 @@ export default function DoctorRegistration() {
       phoneNumber: "",
       medicalLicenseNumber: "",
       licenseState: "",
-      deaNumber: "",
-      npiNumber: "",
       primarySpecialization: "",
       subSpecialization: "",
       yearsOfExperience: "",
-      boardCertifications: "",
-      hospitalName: "",
-      department: "",
-      practiceAddress: "",
+      practiceLocations: [{ hospitalName: "", department: "", address: "" }],
       availableStartTime: "09:00",
       availableEndTime: "17:00",
       slotDuration: "30",
       availableDays: [],
-      hipaaConsent: false,
       termsConsent: false,
       verificationConsent: false,
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "practiceLocations",
   });
 
   const registerMutation = useMutation({
@@ -111,15 +118,10 @@ export default function DoctorRegistration() {
         phoneNumber: data.phoneNumber || null,
         medicalLicenseNumber: data.medicalLicenseNumber,
         licenseState: data.licenseState,
-        deaNumber: data.deaNumber || null,
-        npiNumber: data.npiNumber || null,
         primarySpecialization: data.primarySpecialization,
         subSpecialization: data.subSpecialization || null,
         yearsOfExperience: data.yearsOfExperience || null,
-        boardCertifications: data.boardCertifications || null,
-        hospitalName: data.hospitalName || null,
-        department: data.department || null,
-        practiceAddress: data.practiceAddress || null,
+        practiceLocations: data.practiceLocations || [],
       };
 
       const response = await apiRequest("POST", "/api/doctors/register", doctorData);
@@ -179,36 +181,19 @@ export default function DoctorRegistration() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 gradient-primary opacity-95"></div>
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20"></div>
-
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-pulse-slow"></div>
-      <div className="absolute bottom-40 right-20 w-24 h-24 bg-white/10 rounded-full blur-xl animate-float" style={{ animationDelay: "3s" }}></div>
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center">
-              <Stethoscope className="text-white w-8 h-8" />
-            </div>
-            <h1 className="text-5xl md:text-6xl font-display font-bold text-white leading-tight">
-              <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Doctor Registration</span>
-            </h1>
-          </div>
-          <p className="text-xl text-blue-100 font-light">Join our professional network of orthopedic specialists</p>
+    <div className="min-h-screen bg-page">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-th mb-2 tracking-tight">Doctor Registration</h1>
+          <p className="text-tm">Complete your professional profile to get started</p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8 md:p-12 animate-slide-up medical-shadow">
+        <div className="bg-surface border border-bd rounded-lg p-6 md:p-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Personal Information */}
               <section>
-                <h3 className="text-2xl font-display font-bold text-white mb-6 border-b border-white/20 pb-4">
-                  <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Personal Information</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -220,7 +205,7 @@ export default function DoctorRegistration() {
                         </FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-title" className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger data-testid="select-title" className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select title" />
                             </SelectTrigger>
                           </FormControl>
@@ -244,7 +229,7 @@ export default function DoctorRegistration() {
                         <FormLabel>Gender</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-gender" className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger data-testid="select-gender" className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select gender" />
                             </SelectTrigger>
                           </FormControl>
@@ -266,7 +251,7 @@ export default function DoctorRegistration() {
                       <FormItem>
                         <FormLabel>Date of Birth</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} data-testid="input-dateOfBirth" className="bg-slate-700 border-slate-600 text-white" />
+                          <Input type="date" {...field} data-testid="input-dateOfBirth" className="bg-ib border-ibr text-th" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -282,7 +267,7 @@ export default function DoctorRegistration() {
                           Phone Number <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="+1 (555) 123-4567" {...field} data-testid="input-phoneNumber" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
+                          <Input placeholder="03001234567" {...field} data-testid="input-phoneNumber" className="bg-ib border-ibr text-th placeholder:text-tm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -293,9 +278,7 @@ export default function DoctorRegistration() {
 
               {/* Medical Credentials */}
               <section>
-                <h3 className="text-2xl font-display font-bold text-white mb-6 border-b border-white/20 pb-4">
-                  <span className="bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-transparent">Medical Credentials</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Medical Credentials</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -303,10 +286,10 @@ export default function DoctorRegistration() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Medical License Number <span className="text-red-400">*</span>
+                          PMDC Registration Number <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter license number" {...field} data-testid="input-medicalLicense" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
+                          <Input placeholder="e.g. 12345-M or 123456" {...field} data-testid="input-medicalLicense" className="bg-ib border-ibr text-th placeholder:text-tm" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -319,39 +302,24 @@ export default function DoctorRegistration() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          License State/Country <span className="text-red-400">*</span>
+                          Registration Province <span className="text-red-400">*</span>
                         </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter license state/country" {...field} data-testid="input-licenseState" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="deaNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>DEA Number (if applicable)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter DEA number" {...field} data-testid="input-deaNumber" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="npiNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>NPI Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="National Provider Identifier" {...field} data-testid="input-npiNumber" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-licenseState" className="bg-ib border-ibr text-th">
+                              <SelectValue placeholder="Select province" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Punjab">Punjab</SelectItem>
+                            <SelectItem value="Sindh">Sindh</SelectItem>
+                            <SelectItem value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa (KPK)</SelectItem>
+                            <SelectItem value="Balochistan">Balochistan</SelectItem>
+                            <SelectItem value="Gilgit-Baltistan">Gilgit-Baltistan</SelectItem>
+                            <SelectItem value="Azad Jammu and Kashmir">Azad Jammu and Kashmir (AJK)</SelectItem>
+                            <SelectItem value="Islamabad Capital Territory">Islamabad Capital Territory</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -361,9 +329,7 @@ export default function DoctorRegistration() {
 
               {/* Specialization & Experience */}
               <section>
-                <h3 className="text-2xl font-display font-bold text-white mb-6 border-b border-white/20 pb-4">
-                  <span className="bg-gradient-to-r from-white to-teal-100 bg-clip-text text-transparent">Specialization & Experience</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Specialization & Experience</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -375,7 +341,7 @@ export default function DoctorRegistration() {
                         </FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-primarySpecialization" className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger data-testid="select-primarySpecialization" className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select specialization" />
                             </SelectTrigger>
                           </FormControl>
@@ -399,7 +365,7 @@ export default function DoctorRegistration() {
                         <FormLabel>Sub-specialization</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-subSpecialization" className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger data-testid="select-subSpecialization" className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select sub-specialization" />
                             </SelectTrigger>
                           </FormControl>
@@ -425,7 +391,7 @@ export default function DoctorRegistration() {
                         <FormLabel>Years of Experience</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-yearsOfExperience" className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger data-testid="select-yearsOfExperience" className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select experience" />
                             </SelectTrigger>
                           </FormControl>
@@ -441,80 +407,79 @@ export default function DoctorRegistration() {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="boardCertifications"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Board Certifications</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter board certifications" {...field} data-testid="input-boardCertifications" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </section>
 
               {/* Practice Information */}
               <section>
-                <h3 className="text-2xl font-display font-bold text-white mb-6 border-b border-white/20 pb-4">
-                  <span className="bg-gradient-to-r from-white to-green-100 bg-clip-text text-transparent">Practice Information</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="hospitalName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Hospital/Clinic Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter institution name" {...field} data-testid="input-hospitalName" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter department" {...field} data-testid="input-department" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="md:col-span-2">
-                    <FormField
-                      control={form.control}
-                      name="practiceAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Practice Address</FormLabel>
-                          <FormControl>
-                            <Textarea rows={3} placeholder="Enter complete address" {...field} data-testid="textarea-practiceAddress" className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Practice Information</h3>
+                <div className="space-y-6">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="p-5 bg-surface-alt rounded-lg border border-bd space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-th">Practice Location {index + 1}</h4>
+                        {fields.length > 1 && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`practiceLocations.${index}.hospitalName`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Hospital/Clinic Name <span className="text-red-400">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter institution name" {...field} autoComplete="off" className="bg-ib border-ibr text-th placeholder:text-tm" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`practiceLocations.${index}.department`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Department</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Orthopedics" {...field} autoComplete="off" className="bg-ib border-ibr text-th placeholder:text-tm" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name={`practiceLocations.${index}.address`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Practice Address</FormLabel>
+                            <FormControl>
+                              <Textarea rows={2} placeholder="Enter complete address" {...field} autoComplete="off" className="bg-ib border-ibr text-th placeholder:text-tm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => append({ hospitalName: "", department: "", address: "" })} className="w-full bg-surface-alt border-bd text-ts hover:bg-surface hover:text-th">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Another Practice Location
+                  </Button>
                 </div>
               </section>
 
               {/* Availability Schedule */}
               <section>
-                <h3 className="text-2xl font-display font-bold text-white mb-6 border-b border-white/20 pb-4">
-                  <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Availability Schedule</span>
-                </h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Availability Schedule</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <FormField
                     control={form.control}
@@ -525,7 +490,7 @@ export default function DoctorRegistration() {
                           Start Time <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} className="bg-slate-700 border-slate-600 text-white" />
+                          <Input type="time" {...field} className="bg-ib border-ibr text-th" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -540,7 +505,7 @@ export default function DoctorRegistration() {
                           End Time <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="time" {...field} className="bg-slate-700 border-slate-600 text-white" />
+                          <Input type="time" {...field} className="bg-ib border-ibr text-th" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -556,7 +521,7 @@ export default function DoctorRegistration() {
                         </FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                            <SelectTrigger className="bg-ib border-ibr text-th">
                               <SelectValue placeholder="Select duration" />
                             </SelectTrigger>
                           </FormControl>
@@ -577,7 +542,7 @@ export default function DoctorRegistration() {
                   name="availableDays"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-white">
+                      <FormLabel className="text-th">
                         Available Days <span className="text-red-400">*</span>
                       </FormLabel>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -602,10 +567,10 @@ export default function DoctorRegistration() {
                                     onCheckedChange={(checked) => {
                                       return checked ? field.onChange([...field.value, day.value]) : field.onChange(field.value?.filter((value) => value !== day.value));
                                     }}
-                                    className="border-white/40"
+                                    className="border-bd"
                                   />
                                 </FormControl>
-                                <FormLabel className="text-sm text-white font-normal">{day.label}</FormLabel>
+                                <FormLabel className="text-sm text-th font-normal">{day.label}</FormLabel>
                               </FormItem>
                             )}
                           />
@@ -622,30 +587,14 @@ export default function DoctorRegistration() {
                 <div className="space-y-6">
                   <FormField
                     control={form.control}
-                    name="hipaaConsent"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-white/5 rounded-lg border border-white/10">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-hipaaConsent" className="mt-1 h-5 w-5" />
-                        </FormControl>
-                        <div className="space-y-1 leading-relaxed">
-                          <FormLabel className="text-base text-white font-medium cursor-pointer">I acknowledge compliance with HIPAA regulations and patient privacy requirements</FormLabel>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="termsConsent"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-white/5 rounded-lg border border-white/10">
+                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-surface-alt rounded-lg border border-bd">
                         <FormControl>
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-termsConsent" className="mt-1 h-5 w-5" />
                         </FormControl>
                         <div className="space-y-1 leading-relaxed">
-                          <FormLabel className="text-base text-white font-medium cursor-pointer">I agree to the Terms of Service and Privacy Policy</FormLabel>
+                          <FormLabel className="text-base text-th font-medium cursor-pointer">I agree to the Terms of Service and Privacy Policy</FormLabel>
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -656,12 +605,12 @@ export default function DoctorRegistration() {
                     control={form.control}
                     name="verificationConsent"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-white/5 rounded-lg border border-white/10">
+                      <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-surface-alt rounded-lg border border-bd">
                         <FormControl>
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-verificationConsent" className="mt-1 h-5 w-5" />
                         </FormControl>
                         <div className="space-y-1 leading-relaxed">
-                          <FormLabel className="text-base text-white font-medium cursor-pointer">I consent to medical license verification</FormLabel>
+                          <FormLabel className="text-base text-th font-medium cursor-pointer">I consent to PMDC registration verification</FormLabel>
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -671,10 +620,9 @@ export default function DoctorRegistration() {
               </section>
 
               {/* Submit Button */}
-              <div className="pt-8 border-t border-white/20">
-                <Button type="submit" className="group w-full relative overflow-hidden bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 flex items-center justify-center py-4 px-8 rounded-2xl font-semibold text-lg transition-all duration-300 hover:scale-105 medical-shadow" disabled={registerMutation.isPending} data-testid="button-submit">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative z-10">{registerMutation.isPending ? "Creating Account..." : "Complete Registration"}</span>
+              <div className="pt-6 border-t border-bd">
+                <Button type="submit" className="w-full bg-ac hover:bg-ac-hover text-primary-foreground font-medium transition-colors duration-200" disabled={registerMutation.isPending} data-testid="button-submit">
+                  {registerMutation.isPending ? "Creating Account..." : "Complete Registration"}
                 </Button>
               </div>
             </form>

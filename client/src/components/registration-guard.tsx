@@ -33,10 +33,10 @@ export function RegistrationGuard({ children }: { children: React.ReactNode }) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-ac mx-auto mb-4"></div>
+          <p className="text-th text-lg">Loading...</p>
         </div>
       </div>
     );
@@ -45,10 +45,10 @@ export function RegistrationGuard({ children }: { children: React.ReactNode }) {
   // If authenticated but registration not completed, show nothing (will redirect)
   if (isAuthenticated && !hasCompletedRegistration && location !== "/doctor-registration" && location !== "/patient-registration") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Redirecting to registration...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-ac mx-auto mb-4"></div>
+          <p className="text-th text-lg">Redirecting to registration...</p>
         </div>
       </div>
     );

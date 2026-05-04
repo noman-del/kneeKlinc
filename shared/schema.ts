@@ -29,15 +29,14 @@ export interface IDoctor extends Document {
   phoneNumber?: string;
   medicalLicenseNumber: string;
   licenseState: string;
-  deaNumber?: string;
-  npiNumber?: string;
   primarySpecialization: string;
   subSpecialization?: string;
   yearsOfExperience?: string;
-  boardCertifications?: string;
-  hospitalName?: string;
-  department?: string;
-  practiceAddress?: string;
+  practiceLocations?: Array<{
+    hospitalName: string;
+    department?: string;
+    address?: string;
+  }>;
   isVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -94,6 +93,8 @@ export interface IOTPVerification extends Document {
     firstName: string;
     lastName: string;
     userType: "doctor" | "patient" | "admin";
+    height?: string;
+    weight?: string;
   };
   expiresAt: Date;
   verified: boolean;
@@ -141,15 +142,16 @@ const doctorSchema = new Schema<IDoctor>(
     phoneNumber: String,
     medicalLicenseNumber: { type: String, required: true },
     licenseState: { type: String, required: true },
-    deaNumber: String,
-    npiNumber: String,
     primarySpecialization: { type: String, required: true },
     subSpecialization: String,
     yearsOfExperience: String,
-    boardCertifications: String,
-    hospitalName: String,
-    department: String,
-    practiceAddress: String,
+    practiceLocations: [
+      {
+        hospitalName: { type: String, required: true },
+        department: String,
+        address: String,
+      },
+    ],
     isVerified: { type: Boolean, default: false },
   },
   {
@@ -224,6 +226,8 @@ const otpVerificationSchema = new Schema<IOTPVerification>(
       firstName: { type: String, required: true },
       lastName: { type: String, required: true },
       userType: { type: String, required: true, enum: ["doctor", "patient", "admin"] },
+      height: String,
+      weight: String,
     },
     expiresAt: { type: Date, required: true, index: true },
     verified: { type: Boolean, default: false },
@@ -258,18 +262,21 @@ export const insertDoctorSchema = z.object({
   gender: z.union([z.string(), z.null()]).optional(),
   dateOfBirth: z.union([z.string(), z.null()]).optional(),
   phoneNumber: z.union([z.string(), z.null()]).optional(),
-  medicalLicenseNumber: z.string().min(1, "Medical license is required"),
-  licenseState: z.string().min(1, "License state is required"),
-  deaNumber: z.union([z.string(), z.null()]).optional(),
-  npiNumber: z.union([z.string(), z.null()]).optional(),
+  medicalLicenseNumber: z.string().min(1, "PMDC registration is required"),
+  licenseState: z.string().min(1, "Registration province is required"),
   // Only knee-related specializations allowed
   primarySpecialization: z.enum(["Orthopedic Surgery", "Rheumatology", "Sports Medicine", "Physical Medicine & Rehabilitation"], { required_error: "Specialization must be knee-related" }),
   subSpecialization: z.union([z.string(), z.null()]).optional(),
   yearsOfExperience: z.union([z.string(), z.null()]).optional(),
-  boardCertifications: z.union([z.string(), z.null()]).optional(),
-  hospitalName: z.union([z.string(), z.null()]).optional(),
-  department: z.union([z.string(), z.null()]).optional(),
-  practiceAddress: z.union([z.string(), z.null()]).optional(),
+  practiceLocations: z
+    .array(
+      z.object({
+        hospitalName: z.string().min(1, "Hospital name is required"),
+        department: z.string().optional(),
+        address: z.string().optional(),
+      }),
+    )
+    .optional(),
   isVerified: z.boolean().optional(),
 });
 

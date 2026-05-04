@@ -156,12 +156,12 @@ function Admin() {
   });
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950/95">
+    <div className="min-h-[calc(100vh-4rem)] bg-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <p className="text-xs font-semibold tracking-wider text-emerald-400 uppercase mb-1">Administration</p>
-          <h1 className="text-3xl font-bold text-white mb-1">Clinical Operations Console</h1>
-          <p className="text-sm text-slate-300">
+          <p className="text-xs font-semibold tracking-wider text-ac uppercase mb-1">Administration</p>
+          <h1 className="text-3xl font-bold text-th mb-1">Clinical Operations Console</h1>
+          <p className="text-sm text-ts">
             You are signed in as <span className="font-semibold">{user?.firstName || user?.lastName ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim() : user?.email || "Administrator"}</span>. Use this console to monitor activity and centrally manage doctors, patients and appointments across the KneeKlinic platform.
           </p>
         </div>
@@ -174,7 +174,7 @@ function Admin() {
             { id: "patients", label: "Patients" },
             { id: "appointments", label: "Appointments" },
           ].map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all border ${activeTab === tab.id ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/70 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]" : "bg-slate-900/60 text-slate-300 border-slate-700 hover:border-emerald-400/70 hover:text-emerald-200"}`}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all border ${activeTab === tab.id ? "bg-ac/15 text-ac border-ac/70 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]" : "bg-surface border-bd text-ts hover:border-ac/70 hover:text-ac"}`}>
               {tab.label}
             </button>
           ))}
@@ -192,13 +192,13 @@ function Admin() {
 
             {/* Appointments by status quick view with circular meter */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/95 px-6 py-6 flex items-center gap-6 shadow-xl shadow-black/40 transition-all duration-300 hover:shadow-emerald-500/20 hover:-translate-y-0.5">
+              <div className="rounded-lg border border-bd bg-surface px-6 py-6 flex items-center gap-6">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold tracking-[0.16em] text-slate-200 uppercase mb-3">Appointments by Status</p>
+                  <p className="text-sm font-semibold tracking-[0.16em] text-ts uppercase mb-3">Appointments by Status</p>
                   <div className="flex items-center gap-4">
                     {stats && stats.totalAppointments > 0 ? (
                       <div
-                        className="relative h-28 w-28 rounded-full border border-slate-700/80 flex items-center justify-center text-xs text-slate-200 shadow-inner shadow-black/40"
+                        className="relative h-28 w-28 rounded-full border border-bd flex items-center justify-center text-xs text-ts shadow-inner shadow-black/40"
                         style={{
                           background: (() => {
                             const total = stats.totalAppointments || 0;
@@ -228,13 +228,13 @@ function Admin() {
                       >
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
-                            <div className="text-xs text-slate-300">Total</div>
-                            <div className="text-2xl font-semibold text-slate-50">{stats.totalAppointments}</div>
+                            <div className="text-xs text-ts">Total</div>
+                            <div className="text-2xl font-semibold text-th">{stats.totalAppointments}</div>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="h-24 w-24 rounded-full border border-dashed border-slate-700 flex items-center justify-center text-xs text-slate-500">No data</div>
+                      <div className="h-24 w-24 rounded-full border border-dashed border-bd flex items-center justify-center text-xs text-tm">No data</div>
                     )}
                     <div className="flex-1 space-y-1 text-sm">
                       {stats ? (
@@ -249,14 +249,14 @@ function Admin() {
                             <div key={s.key} className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
                                 <span className={`h-2 w-2 rounded-full ${s.color}`} />
-                                <span className="capitalize text-slate-100">{s.label}</span>
+                                <span className="capitalize text-th">{s.label}</span>
                               </div>
-                              <span className="text-slate-400">{count}</span>
+                              <span className="text-tm">{count}</span>
                             </div>
                           );
                         })
                       ) : (
-                        <p className="text-slate-500 text-sm">No appointment data yet.</p>
+                        <p className="text-tm text-sm">No appointment data yet.</p>
                       )}
                     </div>
                   </div>
@@ -264,35 +264,35 @@ function Admin() {
               </div>
 
               {/* AI usage summary */}
-              <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-900/95 px-6 py-6 flex flex-col gap-3 shadow-xl shadow-black/40 transition-all duration-300 hover:shadow-cyan-500/20 hover:-translate-y-0.5">
-                <p className="text-sm font-semibold tracking-[0.16em] text-slate-200 uppercase">AI X-ray Usage</p>
+              <div className="rounded-lg border border-bd bg-surface px-6 py-6 flex flex-col gap-3">
+                <p className="text-sm font-semibold tracking-[0.16em] text-ts uppercase">AI X-ray Usage</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-semibold text-emerald-400">{stats?.aiTotalAnalyses ?? 0}</span>
-                  <span className="text-sm text-slate-300">total analyses run</span>
+                  <span className="text-4xl font-semibold text-ac">{stats?.aiTotalAnalyses ?? 0}</span>
+                  <span className="text-sm text-ts">total analyses run</span>
                 </div>
                 {stats && stats.aiTotalAnalyses > 0 && (
-                  <div className="grid grid-cols-2 gap-3 text-sm text-slate-200">
+                  <div className="grid grid-cols-2 gap-3 text-sm text-ts">
                     <div className="space-y-1">
-                      <p className="text-slate-400 text-xs uppercase">By OA status</p>
+                      <p className="text-tm text-xs uppercase">By OA status</p>
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1">
                           <span className="h-2 w-2 rounded-full bg-amber-400" /> With OA
                         </span>
-                        <span className="text-slate-100">{stats.aiByOaStatus.withOA}</span>
+                        <span className="text-th">{stats.aiByOaStatus.withOA}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-1">
                           <span className="h-2 w-2 rounded-full bg-emerald-400" /> No OA
                         </span>
-                        <span className="text-slate-200">{stats.aiByOaStatus.withoutOA}</span>
+                        <span className="text-ts">{stats.aiByOaStatus.withoutOA}</span>
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-slate-400 text-[11px] uppercase">By KL grade</p>
+                      <p className="text-tm text-[11px] uppercase">By KL grade</p>
                       {Object.entries(stats.aiByKlGrade || {}).map(([grade, count]) => (
                         <div key={grade} className="flex items-center justify-between">
-                          <span className="text-slate-200">KL {grade}</span>
-                          <span className="text-slate-400">{count}</span>
+                          <span className="text-ts">KL {grade}</span>
+                          <span className="text-tm">{count}</span>
                         </div>
                       ))}
                     </div>
@@ -306,10 +306,10 @@ function Admin() {
         {/* Doctors */}
         {activeTab === "doctors" && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-white mb-2">Doctors</h2>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-lg shadow-black/40">
+            <h2 className="text-xl font-semibold text-th mb-2">Doctors</h2>
+            <div className="rounded-lg border border-bd bg-surface overflow-hidden">
               <table className="min-w-full text-sm text-left">
-                <thead className="bg-slate-800 text-slate-300">
+                <thead className="bg-surface-alt text-ts">
                   <tr>
                     <th className="px-4 py-2">Doctor</th>
                     <th className="px-4 py-2">Email</th>
@@ -319,10 +319,10 @@ function Admin() {
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700">
+                <tbody className="divide-y divide-bd">
                   {doctorsData?.doctors.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-4 text-center text-slate-400">
+                      <td colSpan={6} className="px-4 py-4 text-center text-tm">
                         No doctors found.
                       </td>
                     </tr>
@@ -332,11 +332,11 @@ function Admin() {
                     const linkedUserObj: AdminUser | undefined = typeof linkedUser === "string" ? undefined : linkedUser;
                     const userId = typeof linkedUser === "string" ? linkedUser : linkedUserObj?._id;
                     return (
-                      <tr key={d._id} className="hover:bg-slate-800/60">
-                        <td className="px-4 py-2 text-slate-100">{`${d.title || ""} ${d.firstName || ""} ${d.lastName || ""}`.trim()}</td>
-                        <td className="px-4 py-2 text-slate-300">{d.email}</td>
-                        <td className="px-4 py-2 text-slate-300">{d.primarySpecialization}</td>
-                        <td className="px-4 py-2 text-slate-400">{d.hospitalName || "-"}</td>
+                      <tr key={d._id} className="hover:bg-surface-alt/60">
+                        <td className="px-4 py-2 text-th">{`${d.title || ""} ${d.firstName || ""} ${d.lastName || ""}`.trim()}</td>
+                        <td className="px-4 py-2 text-ts">{d.email}</td>
+                        <td className="px-4 py-2 text-ts">{d.primarySpecialization}</td>
+                        <td className="px-4 py-2 text-tm">{d.hospitalName || "-"}</td>
                         <td className="px-4 py-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${linkedUserObj?.isSuspended ? "bg-red-500/10 text-red-300 border border-red-500/40" : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"}`}>{linkedUserObj?.isSuspended ? "Suspended" : "Active"}</span>
                         </td>
@@ -371,10 +371,10 @@ function Admin() {
         {/* Patients */}
         {activeTab === "patients" && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-white mb-2">Patients</h2>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-lg shadow-black/40">
+            <h2 className="text-xl font-semibold text-th mb-2">Patients</h2>
+            <div className="rounded-lg border border-bd bg-surface overflow-hidden">
               <table className="min-w-full text-sm text-left">
-                <thead className="bg-slate-800 text-slate-300">
+                <thead className="bg-surface-alt text-ts">
                   <tr>
                     <th className="px-4 py-2">Patient</th>
                     <th className="px-4 py-2">Email</th>
@@ -383,19 +383,19 @@ function Admin() {
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700">
+                <tbody className="divide-y divide-bd">
                   {patientsData?.patients.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-4 text-center text-slate-400">
+                      <td colSpan={5} className="px-4 py-4 text-center text-tm">
                         No patients found.
                       </td>
                     </tr>
                   )}
                   {patientsData?.patients.map((p: AdminUser) => (
-                    <tr key={p._id} className="hover:bg-slate-800/60">
-                      <td className="px-4 py-2 text-slate-100">{p.firstName || p.lastName ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : p.email}</td>
-                      <td className="px-4 py-2 text-slate-300">{p.email}</td>
-                      <td className="px-4 py-2 text-slate-400 text-xs">{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <tr key={p._id} className="hover:bg-surface-alt/60">
+                      <td className="px-4 py-2 text-th">{p.firstName || p.lastName ? `${p.firstName || ""} ${p.lastName || ""}`.trim() : p.email}</td>
+                      <td className="px-4 py-2 text-ts">{p.email}</td>
+                      <td className="px-4 py-2 text-tm text-xs">{new Date(p.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-2">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${p.isSuspended ? "bg-red-500/10 text-red-300 border border-red-500/40" : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"}`}>{p.isSuspended ? "Suspended" : "Active"}</span>
                       </td>
@@ -425,10 +425,10 @@ function Admin() {
         {/* Appointments */}
         {activeTab === "appointments" && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-white mb-2">Appointments</h2>
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 overflow-hidden shadow-lg shadow-black/40">
+            <h2 className="text-xl font-semibold text-th mb-2">Appointments</h2>
+            <div className="rounded-lg border border-bd bg-surface overflow-hidden">
               <table className="min-w-full text-sm text-left">
-                <thead className="bg-slate-800 text-slate-300">
+                <thead className="bg-surface-alt text-ts">
                   <tr>
                     <th className="px-4 py-2">Date</th>
                     <th className="px-4 py-2">Time</th>
@@ -439,10 +439,10 @@ function Admin() {
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-700">
+                <tbody className="divide-y divide-bd">
                   {appointmentsData?.appointments.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-4 text-center text-slate-400">
+                      <td colSpan={7} className="px-4 py-4 text-center text-tm">
                         No appointments found.
                       </td>
                     </tr>
@@ -455,12 +455,12 @@ function Admin() {
                     const isPastOrStarted = appointmentDate < now || a.status === "completed" || a.status === "cancelled";
 
                     return (
-                      <tr key={a._id} className="hover:bg-slate-800/60">
-                        <td className="px-4 py-2 text-slate-100">{appointmentDate.toLocaleDateString()}</td>
-                        <td className="px-4 py-2 text-slate-300">{a.appointmentTime}</td>
-                        <td className="px-4 py-2 text-slate-300">{a.doctorId?.firstName ? `${a.doctorId.firstName} ${a.doctorId.lastName || ""}` : a.doctorId?._id}</td>
-                        <td className="px-4 py-2 text-slate-300">{patientName}</td>
-                        <td className="px-4 py-2 text-slate-300 capitalize">{a.type}</td>
+                      <tr key={a._id} className="hover:bg-surface-alt/60">
+                        <td className="px-4 py-2 text-th">{appointmentDate.toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-ts">{a.appointmentTime}</td>
+                        <td className="px-4 py-2 text-ts">{a.doctorId?.firstName ? `${a.doctorId.firstName} ${a.doctorId.lastName || ""}` : a.doctorId?._id}</td>
+                        <td className="px-4 py-2 text-ts">{patientName}</td>
+                        <td className="px-4 py-2 text-ts capitalize">{a.type}</td>
                         <td className="px-4 py-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${a.status === "cancelled" ? "bg-red-500/10 text-red-300 border border-red-500/40" : a.status === "completed" ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40" : "bg-blue-500/10 text-blue-300 border border-blue-500/40"}`}>{a.status}</span>
                         </td>
@@ -493,14 +493,14 @@ function Admin() {
 
 function OverviewCard({ title, value, icon: Icon, accent }: { title: string; value: number; icon: React.ComponentType<{ className?: string }>; accent: string }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-4 flex flex-col gap-3 shadow-lg shadow-black/40">
+    <div className="rounded-lg border border-bd bg-surface p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs uppercase tracking-wide text-slate-400">{title}</span>
-        <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${accent} flex items-center justify-center text-emerald-200`}>
+        <span className="text-xs uppercase tracking-wide text-tm">{title}</span>
+        <div className={`h-8 w-8 rounded-lg bg-ac-muted flex items-center justify-center text-ac`}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <span className="text-3xl font-semibold text-white leading-tight">{value}</span>
+      <span className="text-3xl font-semibold text-th leading-tight">{value}</span>
     </div>
   );
 }

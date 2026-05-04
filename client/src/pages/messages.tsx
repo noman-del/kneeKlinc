@@ -277,41 +277,41 @@ export default function Messages() {
   };
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-4">
+    <div className="h-[100dvh] overflow-hidden bg-page p-4">
       <div className="max-w-[1600px] mx-auto h-full flex flex-col">
         <div className="mb-4 flex-shrink-0">
-          <h1 className="text-3xl font-bold text-white mb-2">Messages</h1>
-          <p className="text-slate-300">Chat with your healthcare providers</p>
+          <h1 className="text-3xl font-bold text-th mb-1 tracking-tight">Messages</h1>
+          <p className="text-tm">Chat with your healthcare providers</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
           {/* Conversations List */}
           <div className={`lg:col-span-4 ${activeConversation ? "hidden lg:block" : ""} h-full flex flex-col min-h-0`}>
-            <Card className="bg-slate-800/50 border-slate-700 flex-1 overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-slate-700">
-                <h2 className="text-white font-semibold text-lg">Conversations</h2>
+            <Card className="bg-surface border-bd flex-1 overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-bd">
+                <h2 className="text-th font-semibold text-lg">Conversations</h2>
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 {loading ? (
-                  <p className="text-slate-400 p-4">Loading...</p>
+                  <p className="text-tm p-4">Loading...</p>
                 ) : conversations.length === 0 ? (
                   <div className="text-center p-8">
-                    <p className="text-slate-400">No conversations yet</p>
-                    <p className="text-slate-500 text-sm mt-2">Start by booking an appointment</p>
+                    <p className="text-tm">No conversations yet</p>
+                    <p className="text-tm text-sm mt-2">Start by booking an appointment</p>
                   </div>
                 ) : (
                   <div className="space-y-1 p-2">
                     {conversations.map((conv) => (
-                      <div key={conv.userId} onClick={() => openConversation(conv)} className={`p-4 rounded-lg cursor-pointer transition-all ${activeConversation?.userId === conv.userId ? "bg-indigo-600/30 border border-indigo-500" : "bg-slate-700/30 hover:bg-slate-700/50"}`}>
+                      <div key={conv.userId} onClick={() => openConversation(conv)} className={`p-4 rounded-lg cursor-pointer transition-colors duration-150 ${activeConversation?.userId === conv.userId ? "bg-ac/10 border border-ac/30" : "bg-surface-alt hover:bg-surface"}`}>
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">{conv.profileImage ? <img src={conv.profileImage} alt={conv.name} className="w-full h-full rounded-full object-cover" /> : <User className="w-6 h-6 text-white" />}</div>
+                          <div className="w-10 h-10 bg-ac-muted rounded-full flex items-center justify-center flex-shrink-0">{conv.profileImage ? <img src={conv.profileImage} alt={conv.name} className="w-full h-full rounded-full object-cover" /> : <User className="w-5 h-5 text-ac" />}</div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
-                              <h3 className="text-white font-medium truncate">{conv.name}</h3>
-                              {conv.unreadCount > 0 && <span className="bg-indigo-600 text-white text-xs rounded-full px-2 py-0.5 ml-2">{conv.unreadCount}</span>}
+                              <h3 className="text-th font-medium truncate">{conv.name}</h3>
+                              {conv.unreadCount > 0 && <span className="bg-ac text-primary-foreground text-xs rounded-full px-2 py-0.5 ml-2">{conv.unreadCount}</span>}
                             </div>
-                            <p className="text-slate-400 text-sm truncate">{conv.lastMessage || "No messages yet"}</p>
-                            {conv.lastMessageTime && <p className="text-slate-500 text-xs mt-1">{new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
+                            <p className="text-tm text-sm truncate">{conv.lastMessage || "No messages yet"}</p>
+                            {conv.lastMessageTime && <p className="text-tm text-xs mt-1">{new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>}
                           </div>
                         </div>
                       </div>
@@ -325,34 +325,34 @@ export default function Messages() {
           {/* Chat Window */}
           {activeConversation && (
             <div className="lg:col-span-8 h-full flex flex-col min-h-0">
-              <Card className="bg-slate-800/50 border-slate-700 flex-1 flex flex-col overflow-hidden">
+              <Card className="bg-surface border-bd flex-1 flex flex-col overflow-hidden">
                 {/* Chat Header */}
-                <div className="p-4 border-b border-slate-700 flex items-center space-x-3 flex-shrink-0">
-                  <Button size="sm" variant="ghost" className="lg:hidden text-white" onClick={() => setActiveConversation(null)}>
+                <div className="p-4 border-b border-bd flex items-center space-x-3 flex-shrink-0">
+                  <Button size="sm" variant="ghost" className="lg:hidden text-th" onClick={() => setActiveConversation(null)}>
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">{activeConversation.profileImage ? <img src={activeConversation.profileImage} alt={activeConversation.name} className="w-full h-full rounded-full object-cover" /> : <User className="w-6 h-6 text-white" />}</div>
+                  <div className="w-10 h-10 bg-ac-muted rounded-full flex items-center justify-center flex-shrink-0">{activeConversation.profileImage ? <img src={activeConversation.profileImage} alt={activeConversation.name} className="w-full h-full rounded-full object-cover" /> : <User className="w-5 h-5 text-ac" />}</div>
                   <div className="flex-1">
-                    <h3 className="text-white font-semibold text-lg">
+                    <h3 className="text-th font-semibold text-lg">
                       {activeConversation.userType === "doctor" && activeConversation.title ? `${activeConversation.title} ` : ""}
                       {activeConversation.name}
                     </h3>
                     <div className="flex items-center space-x-2 text-sm">
-                      <p className="text-slate-400 capitalize">{activeConversation.userType}</p>
+                      <p className="text-tm capitalize">{activeConversation.userType}</p>
                       {activeConversation.specialization && (
                         <>
-                          <span className="text-slate-600">•</span>
-                          <p className="text-indigo-400">{activeConversation.specialization}</p>
+                          <span className="text-tm">•</span>
+                          <p className="text-ac">{activeConversation.specialization}</p>
                         </>
                       )}
                       {activeConversation.experience && (
                         <>
-                          <span className="text-slate-600">•</span>
-                          <p className="text-slate-400">{activeConversation.experience}</p>
+                          <span className="text-tm">•</span>
+                          <p className="text-tm">{activeConversation.experience}</p>
                         </>
                       )}
                     </div>
-                    {activeConversation.hospital && <p className="text-slate-500 text-xs mt-0.5">{activeConversation.hospital}</p>}
+                    {activeConversation.hospital && <p className="text-tm text-xs mt-0.5">{activeConversation.hospital}</p>}
                   </div>
                 </div>
 
@@ -366,24 +366,24 @@ export default function Messages() {
                     </div>
                   ) : chatMessages.length === 0 ? (
                     <div className="text-center py-12">
-                      <p className="text-slate-400">No messages yet. Start the conversation!</p>
+                      <p className="text-tm">No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
                     chatMessages.map((msg) => (
                       <div key={msg.id} className={`flex ${msg.isMine ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[70%] rounded-2xl px-4 py-2 ${msg.isMine ? "bg-indigo-600 text-white" : "bg-slate-700 text-white"}`}>
+                        <div className={`max-w-[70%] rounded-lg px-4 py-2 ${msg.isMine ? "bg-ac text-primary-foreground" : "bg-surface-alt border border-bd text-th"}`}>
                           {msg.attachmentUrl && (
                             <div className="mb-2">
                               <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" download={msg.attachmentOriginalName || true}>
-                                <img src={msg.attachmentUrl} alt={msg.attachmentOriginalName || "Attachment"} className="max-h-64 rounded-lg border border-slate-600 mb-1 object-contain" />
+                                <img src={msg.attachmentUrl} alt={msg.attachmentOriginalName || "Attachment"} className="max-h-64 rounded-lg border border-bd mb-1 object-contain" />
                               </a>
-                              <a href={msg.attachmentUrl} download={msg.attachmentOriginalName || true} className={`text-xs underline ${msg.isMine ? "text-indigo-100" : "text-slate-200"}`}>
+                              <a href={msg.attachmentUrl} download={msg.attachmentOriginalName || true} className={`text-xs underline ${msg.isMine ? "text-primary-foreground/80" : "text-ts"}`}>
                                 Download image{msg.attachmentOriginalName ? ` (${msg.attachmentOriginalName})` : ""}
                               </a>
                             </div>
                           )}
                           {msg.message && <p className="whitespace-pre-wrap break-words">{msg.message}</p>}
-                          <p className={`text-xs mt-1 ${msg.isMine ? "text-indigo-200" : "text-slate-400"}`}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                          <p className={`text-xs mt-1 ${msg.isMine ? "text-ac/70" : "text-tm"}`}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                         </div>
                       </div>
                     ))
@@ -392,25 +392,25 @@ export default function Messages() {
                 </div>
 
                 {/* Input */}
-                <div className="p-4 border-t border-slate-700 flex-shrink-0">
+                <div className="p-4 border-t border-bd flex-shrink-0">
                   {attachmentError && <p className="text-xs text-red-400 mb-2">{attachmentError}</p>}
                   {selectedFile && attachmentPreviewUrl && (
-                    <div className="mb-2 flex items-center justify-between bg-slate-700/60 border border-slate-600 rounded-lg p-2">
+                    <div className="mb-2 flex items-center justify-between bg-surface-alt border border-bd rounded-lg p-2">
                       <div className="flex items-center space-x-2">
-                        <ImageIcon className="w-4 h-4 text-slate-200" />
-                        <span className="text-xs text-slate-100 truncate max-w-[200px]">{selectedFile.name}</span>
+                        <ImageIcon className="w-4 h-4 text-ts" />
+                        <span className="text-xs text-th truncate max-w-[200px]">{selectedFile.name}</span>
                       </div>
-                      <button type="button" onClick={clearAttachment} className="text-slate-300 hover:text-white">
+                      <button type="button" onClick={clearAttachment} className="text-ts hover:text-th">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   )}
                   <div className="flex items-center space-x-2">
-                    <button type="button" onClick={handleAttachmentClick} className="p-2 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-200 flex items-center justify-center">
+                    <button type="button" onClick={handleAttachmentClick} className="p-2 rounded-lg bg-surface-alt border border-bd hover:bg-surface text-ts flex items-center justify-center">
                       <ImageIcon className="w-5 h-5" />
                     </button>
-                    <Input value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type a message..." className="flex-1 bg-slate-700 border-slate-600 text-white" />
-                    <Button onClick={sendMessage} disabled={!messageInput.trim() && !selectedFile} className="bg-indigo-600 hover:bg-indigo-700">
+                    <Input value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type a message..." className="flex-1 bg-ib border-ibr text-th placeholder:text-tm" />
+                    <Button onClick={sendMessage} disabled={!messageInput.trim() && !selectedFile} className="bg-ac hover:bg-ac-hover text-primary-foreground transition-colors duration-200">
                       <Send className="w-5 h-5" />
                     </Button>
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAttachmentChange} />

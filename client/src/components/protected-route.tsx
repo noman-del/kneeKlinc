@@ -37,7 +37,7 @@ export function ProtectedRoute({ children, requiredRole, redirectTo = "/login" }
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-medical-blue" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-tm">Loading...</p>
         </div>
       </div>
     );
@@ -72,7 +72,7 @@ export function PublicRoute({ children, redirectTo = "/" }: { children: React.Re
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-medical-blue" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-tm">Loading...</p>
         </div>
       </div>
     );

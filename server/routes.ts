@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDoctorSchema, insertPatientSchema, insertPatientSymptomsSchema, insertPatientInjuriesSchema, signupSchema, loginSchema, verifyOTPSchema, resendOTPSchema, User } from "@shared/schema";
+import { insertDoctorSchema, insertPatientSchema, insertPatientSymptomsSchema, insertPatientInjuriesSchema, signupSchema, loginSchema, verifyOTPSchema, resendOTPSchema, User, Patient } from "@shared/schema";
 import { z } from "zod";
 import { generateToken, hashPassword, comparePassword, authenticateToken, authorizeRole, optionalAuth, AuthRequest } from "./auth";
 import { nanoid } from "nanoid";
@@ -52,6 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const validatedData = signupSchema.parse(req.body);
+      const { height, weight } = req.body;
 
       // Check if user already exists
       const existingUser = await User.findOne({ email: validatedData.email });
@@ -59,8 +60,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User with this email already exists" });
       }
 
-      // Create and send OTP
-      const result = await otpService.createAndSendOTP(validatedData.email, validatedData.password, validatedData.firstName, validatedData.lastName, validatedData.userType);
+      // Create and send OTP (include height and weight for patients)
+      const result = await otpService.createAndSendOTP(validatedData.email, validatedData.password, validatedData.firstName, validatedData.lastName, validatedData.userType, height, weight);
 
       if (!result.success) {
         return res.status(500).json({ message: result.message });
@@ -106,6 +107,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await user.save();
+
+      // If patient, create Patient record with height and weight
+      if (result.userData.userType === "patient") {
+        const patientData: any = {
+          userId: user._id,
+        };
+
+        // Add height and weight if provided
+        if (result.userData.height) {
+          patientData.height = result.userData.height;
+        }
+        if (result.userData.weight) {
+          patientData.weight = result.userData.weight;
+        }
+
+        const patient = new Patient(patientData);
+        await patient.save();
+        console.log(`✅ Patient profile created for: ${user.email}`);
+      }
 
       // Clean up OTP record
       await otpService.cleanupOTP(validatedData.email);
@@ -846,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Doctor profile not found" });
       }
 
-      const { title, gender, dateOfBirth, primarySpecialization, subSpecialization, yearsOfExperience, medicalLicenseNumber, licenseState, deaNumber, npiNumber, hospitalName, department, practiceAddress, phoneNumber, boardCertifications } = req.body || {};
+      const { title, gender, dateOfBirth, primarySpecialization, subSpecialization, yearsOfExperience, medicalLicenseNumber, licenseState, practiceLocations, phoneNumber } = req.body || {};
 
       if (typeof title === "string") doctor.title = title;
       if (typeof gender === "string" || gender === null) doctor.gender = gender;
@@ -856,13 +876,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (typeof yearsOfExperience === "string" || yearsOfExperience === null) doctor.yearsOfExperience = yearsOfExperience;
       if (typeof medicalLicenseNumber === "string") doctor.medicalLicenseNumber = medicalLicenseNumber;
       if (typeof licenseState === "string") doctor.licenseState = licenseState;
-      if (typeof deaNumber === "string" || deaNumber === null) doctor.deaNumber = deaNumber;
-      if (typeof npiNumber === "string" || npiNumber === null) doctor.npiNumber = npiNumber;
-      if (typeof hospitalName === "string" || hospitalName === null) doctor.hospitalName = hospitalName;
-      if (typeof department === "string" || department === null) doctor.department = department;
-      if (typeof practiceAddress === "string" || practiceAddress === null) doctor.practiceAddress = practiceAddress;
+      if (Array.isArray(practiceLocations)) doctor.practiceLocations = practiceLocations;
       if (typeof phoneNumber === "string" || phoneNumber === null) doctor.phoneNumber = phoneNumber;
-      if (typeof boardCertifications === "string" || boardCertifications === null) doctor.boardCertifications = boardCertifications;
 
       await doctor.save();
 
@@ -873,6 +888,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating doctor profile:", error);
       res.status(500).json({ message: "Failed to update doctor profile" });
+    }
+  });
+
+  // Get current patient's profile (logged-in patient)
+  app.get("/api/patients/me", authenticateToken, authorizeRole("patient"), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const patient = await Patient.findOne({ userId });
+      if (!patient) {
+        return res.status(404).json({ message: "Patient profile not found" });
+      }
+
+      res.json({ patient });
+    } catch (error) {
+      console.error("Error fetching current patient profile:", error);
+      res.status(500).json({ message: "Failed to fetch patient profile" });
+    }
+  });
+
+  // Update current patient's profile
+  app.put("/api/patients/me", authenticateToken, authorizeRole("patient"), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+
+      const patient = await Patient.findOne({ userId });
+      if (!patient) {
+        return res.status(404).json({ message: "Patient profile not found" });
+      }
+
+      const { height, weight, gender, dateOfBirth, phoneNumber, emergencyContactPhone } = req.body || {};
+
+      if (typeof height === "string" || height === null) patient.height = height;
+      if (typeof weight === "string" || weight === null) patient.weight = weight;
+      if (typeof gender === "string" || gender === null) patient.gender = gender;
+      if (dateOfBirth) patient.dateOfBirth = dateOfBirth;
+      if (typeof phoneNumber === "string" || phoneNumber === null) patient.phoneNumber = phoneNumber;
+      if (typeof emergencyContactPhone === "string" || emergencyContactPhone === null) patient.emergencyContactPhone = emergencyContactPhone;
+
+      await patient.save();
+
+      res.json({
+        message: "Patient profile updated successfully",
+        patient,
+      });
+    } catch (error) {
+      console.error("Error updating patient profile:", error);
+      res.status(500).json({ message: "Failed to update patient profile" });
+    }
+  });
+
+  // Get current patient's profile
+  app.get("/api/patients/me", authenticateToken, authorizeRole("patient"), async (req: AuthRequest, res) => {
+    try {
+      const patient = await Patient.findOne({ userId: req.user!.id });
+      if (!patient) return res.status(404).json({ message: "Patient profile not found" });
+      res.json({ patient });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch patient profile" });
+    }
+  });
+
+  // Update current patient's profile
+  app.put("/api/patients/me", authenticateToken, authorizeRole("patient"), async (req: AuthRequest, res) => {
+    try {
+      const patient = await Patient.findOne({ userId: req.user!.id });
+      if (!patient) return res.status(404).json({ message: "Patient profile not found" });
+
+      const { height, weight } = req.body || {};
+      if (typeof height === "string" || height === null) patient.height = height;
+      if (typeof weight === "string" || weight === null) patient.weight = weight;
+      await patient.save();
+
+      res.json({ message: "Patient profile updated successfully", patient });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update patient profile" });
     }
   });
 

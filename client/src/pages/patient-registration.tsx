@@ -179,46 +179,30 @@ export default function PatientRegistration() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900"></div>
-      <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 via-transparent to-emerald-900/10"></div>
-
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute top-40 right-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }}></div>
-      <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "4s" }}></div>
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl flex items-center justify-center">
-              <User className="text-white w-8 h-8" />
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight">
-              Patient <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Registration</span>
-            </h1>
-          </div>
-          <p className="text-xl text-slate-300">Join our community for comprehensive knee health management</p>
+    <div className="min-h-screen bg-page">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-th mb-2 tracking-tight">Patient Registration</h1>
+          <p className="text-tm">Complete your profile for comprehensive knee health management</p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-8 md:p-12">
+        <div className="bg-surface border border-bd rounded-lg p-6 md:p-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Personal Information */}
               <section>
-                <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/20 pb-2">Personal Information</h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-medium">
+                        <FormLabel>
                           First Name <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter first name" {...field} data-testid="input-firstName" className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:border-emerald-400 focus:ring-emerald-400/20" />
+                          <Input placeholder="Enter first name" {...field} data-testid="input-firstName" className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -230,11 +214,11 @@ export default function PatientRegistration() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-medium">
+                        <FormLabel>
                           Last Name <span className="text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter last name" {...field} data-testid="input-lastName" className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:border-emerald-400 focus:ring-emerald-400/20" />
+                          <Input placeholder="Enter last name" {...field} data-testid="input-lastName" className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -319,7 +303,7 @@ export default function PatientRegistration() {
 
               {/* Medical History */}
               <section>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-200 pb-2">Medical History</h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Medical History</h3>
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
@@ -353,7 +337,7 @@ export default function PatientRegistration() {
 
                   {/* Symptoms */}
                   <div>
-                    <FormLabel className="text-base font-medium text-slate-700 mb-3 block">Knee-Related Symptoms (Check all that apply)</FormLabel>
+                    <FormLabel className="text-base font-medium text-ts mb-3 block">Knee-Related Symptoms (Check all that apply)</FormLabel>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
@@ -463,7 +447,7 @@ export default function PatientRegistration() {
 
                   {/* Previous Injuries */}
                   <div>
-                    <FormLabel className="text-base font-medium text-slate-700 mb-3 block">Previous Knee Injuries/Surgeries</FormLabel>
+                    <FormLabel className="text-base font-medium text-ts mb-3 block">Previous Knee Injuries/Surgeries</FormLabel>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
@@ -523,7 +507,7 @@ export default function PatientRegistration() {
 
               {/* Lifestyle Factors */}
               <section>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-200 pb-2">Lifestyle Factors</h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Lifestyle Factors</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -617,7 +601,7 @@ export default function PatientRegistration() {
 
               {/* Insurance & Healthcare */}
               <section>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-200 pb-2">Insurance & Healthcare Information</h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Insurance & Healthcare Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -679,7 +663,7 @@ export default function PatientRegistration() {
 
               {/* Account Setup */}
               <section>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 border-b border-slate-200 pb-2">Account Setup</h3>
+                <h3 className="text-lg font-semibold text-th mb-4 border-b border-bd pb-3">Account Setup</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -723,7 +707,7 @@ export default function PatientRegistration() {
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-hipaaConsent" />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel className="text-sm text-slate-700">I understand my rights under HIPAA and consent to the use of my health information</FormLabel>
+                          <FormLabel className="text-sm text-ts">I understand my rights under HIPAA and consent to the use of my health information</FormLabel>
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -739,7 +723,7 @@ export default function PatientRegistration() {
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-termsConsent" />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel className="text-sm text-slate-700">I agree to the Terms of Service and Privacy Policy</FormLabel>
+                          <FormLabel className="text-sm text-ts">I agree to the Terms of Service and Privacy Policy</FormLabel>
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -755,7 +739,7 @@ export default function PatientRegistration() {
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-aiDisclosure" />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel className="text-sm text-slate-700">I understand this platform uses AI for assistive prediction and does not replace professional medical advice</FormLabel>
+                          <FormLabel className="text-sm text-ts">I understand this platform uses AI for assistive prediction and does not replace professional medical advice</FormLabel>
                           <FormMessage />
                         </div>
                       </FormItem>
@@ -765,14 +749,13 @@ export default function PatientRegistration() {
               </section>
 
               {/* Submit Button */}
-              <div className="pt-8 border-t border-white/20">
-                <div className="flex flex-col sm:flex-row gap-6">
-                  <Button type="submit" className="group flex-1 relative overflow-hidden bg-white/20 backdrop-blur-md border border-white/30 text-white hover:bg-white/30 flex items-center justify-center py-4 px-8 rounded-2xl font-semibold text-lg transition-all duration-300 hover:scale-105 medical-shadow" disabled={registerMutation.isPending} data-testid="button-submit">
-                    <div className="absolute inset-0 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <span className="relative z-10">{registerMutation.isPending ? "Creating Account..." : "Complete Registration"}</span>
+              <div className="pt-6 border-t border-bd">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button type="submit" className="flex-1 bg-ac hover:bg-ac-hover text-primary-foreground font-medium transition-colors duration-200" disabled={registerMutation.isPending} data-testid="button-submit">
+                    {registerMutation.isPending ? "Creating Account..." : "Complete Registration"}
                   </Button>
                   <Link href="/">
-                    <Button type="button" variant="outline" className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 py-4 px-8 rounded-2xl font-semibold text-lg transition-all duration-300" data-testid="button-back">
+                    <Button type="button" variant="outline" className="w-full bg-surface-alt border-bd text-ts hover:bg-surface hover:text-th transition-colors duration-200" data-testid="button-back">
                       Back to Home
                     </Button>
                   </Link>

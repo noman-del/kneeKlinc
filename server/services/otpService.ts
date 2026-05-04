@@ -13,7 +13,7 @@ export class OTPService {
   }
 
   // Create and send OTP for signup
-  async createAndSendOTP(email: string, password: string, firstName: string, lastName: string, userType: "doctor" | "patient" | "admin"): Promise<{ success: boolean; message: string }> {
+  async createAndSendOTP(email: string, password: string, firstName: string, lastName: string, userType: "doctor" | "patient" | "admin", height?: string, weight?: string): Promise<{ success: boolean; message: string }> {
     try {
       // Generate OTP
       const otp = this.generateOTP();
@@ -36,6 +36,8 @@ export class OTPService {
           firstName,
           lastName,
           userType,
+          height,
+          weight,
         },
         expiresAt,
         verified: false,
@@ -72,7 +74,7 @@ export class OTPService {
   // Verify OTP
   async verifyOTP(
     email: string,
-    otp: string
+    otp: string,
   ): Promise<{
     success: boolean;
     message: string;
@@ -82,6 +84,8 @@ export class OTPService {
       firstName: string;
       lastName: string;
       userType: "doctor" | "patient" | "admin";
+      height?: string;
+      weight?: string;
     };
   }> {
     try {

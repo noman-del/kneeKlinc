@@ -435,42 +435,42 @@ export default function Appointments() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-6">
+    <div className="min-h-screen bg-page p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Appointments</h1>
-            <p className="text-slate-300">Manage your healthcare appointments</p>
+            <h1 className="text-3xl font-bold text-th mb-1 tracking-tight">Appointments</h1>
+            <p className="text-tm">Manage your healthcare appointments</p>
           </div>
           {userType === "patient" && (
-            <Button onClick={() => setIsBooking(true)} className="bg-indigo-600 hover:bg-indigo-700">
-              <Calendar className="w-5 h-5 mr-2" />
+            <Button onClick={() => setIsBooking(true)} className="bg-ac hover:bg-ac-hover text-primary-foreground font-medium transition-colors duration-200">
+              <Calendar className="w-4 h-4 mr-2" />
               Book Appointment
             </Button>
           )}
         </div>
 
         {isBooking && userType === "patient" && (
-          <Card className="bg-slate-800/50 border-slate-700 mb-6">
+          <Card className="bg-surface border-bd mb-6">
             <CardHeader>
-              <CardTitle className="text-white">Book New Appointment</CardTitle>
+              <CardTitle className="text-th">Book New Appointment</CardTitle>
               {newAppointment.doctorId && doctors.find((d) => d.id === newAppointment.doctorId) && (
                 <div className="mt-2">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-600" />
+                    <div className="w-10 h-10 rounded-full bg-ac/20" />
                     <div>
-                      <p className="text-white font-semibold">{doctors.find((d) => d.id === newAppointment.doctorId)?.name}</p>
-                      <div className="text-xs text-slate-400">
-                        <span className="text-indigo-300">{doctors.find((d) => d.id === newAppointment.doctorId)?.specialization}</span>
+                      <p className="text-th font-semibold">{doctors.find((d) => d.id === newAppointment.doctorId)?.name}</p>
+                      <div className="text-xs text-tm">
+                        <span className="text-ac">{doctors.find((d) => d.id === newAppointment.doctorId)?.specialization}</span>
                         {doctors.find((d) => d.id === newAppointment.doctorId)?.experience && (
                           <>
-                            <span className="mx-2 text-slate-600">•</span>
+                            <span className="mx-2 text-tm">•</span>
                             <span>{doctors.find((d) => d.id === newAppointment.doctorId)?.experience}</span>
                           </>
                         )}
                         {doctors.find((d) => d.id === newAppointment.doctorId)?.hospital && (
                           <>
-                            <span className="mx-2 text-slate-600">•</span>
+                            <span className="mx-2 text-tm">•</span>
                             <span>{doctors.find((d) => d.id === newAppointment.doctorId)?.hospital}</span>
                           </>
                         )}
@@ -483,8 +483,8 @@ export default function Appointments() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Select Doctor</label>
-                  <select value={newAppointment.doctorId} onChange={(e) => setNewAppointment({ ...newAppointment, doctorId: e.target.value })} className="w-full bg-slate-700 border-slate-600 text-white rounded-lg p-3">
+                  <label className="text-th text-sm font-medium mb-2 block">Select Doctor</label>
+                  <select value={newAppointment.doctorId} onChange={(e) => setNewAppointment({ ...newAppointment, doctorId: e.target.value })} className="w-full bg-ib border-ibr text-th rounded-lg p-3">
                     <option value="">Choose a doctor</option>
                     {doctors.map((doc) => (
                       <option key={doc.id} value={doc.id}>
@@ -495,13 +495,13 @@ export default function Appointments() {
                   {/* Removed secondary preview to keep details only in header */}
                 </div>
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Appointment Date</label>
-                  <Input type="date" min={getTodayDate()} value={newAppointment.appointmentDate} onChange={(e) => setNewAppointment({ ...newAppointment, appointmentDate: e.target.value })} className="bg-slate-700 border-slate-600 text-white" />
+                  <label className="text-th text-sm font-medium mb-2 block">Appointment Date</label>
+                  <Input type="date" min={getTodayDate()} value={newAppointment.appointmentDate} onChange={(e) => setNewAppointment({ ...newAppointment, appointmentDate: e.target.value })} className="bg-ib border-ibr text-th" />
                 </div>
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Appointment Time</label>
+                  <label className="text-th text-sm font-medium mb-2 block">Appointment Time</label>
                   {getFilteredSlots().length > 0 ? (
-                    <select value={newAppointment.appointmentTime} onChange={(e) => setNewAppointment({ ...newAppointment, appointmentTime: e.target.value })} className="w-full bg-slate-700 border-slate-600 text-white rounded-lg p-3">
+                    <select value={newAppointment.appointmentTime} onChange={(e) => setNewAppointment({ ...newAppointment, appointmentTime: e.target.value })} className="w-full bg-ib border-ibr text-th rounded-lg p-3">
                       <option value="">Select available time</option>
                       {getFilteredSlots().map((slot) => (
                         <option key={slot} value={slot}>
@@ -510,27 +510,27 @@ export default function Appointments() {
                       ))}
                     </select>
                   ) : (
-                    <div className="bg-slate-700 border-slate-600 text-slate-400 rounded-lg p-3">{newAppointment.doctorId && newAppointment.appointmentDate ? "No available slots for this date/time" : "Select doctor and date first"}</div>
+                    <div className="bg-ib border-ibr text-tm rounded-lg p-3">{newAppointment.doctorId && newAppointment.appointmentDate ? "No available slots for this date/time" : "Select doctor and date first"}</div>
                   )}
                 </div>
                 <div>
-                  <label className="text-white text-sm font-medium mb-2 block">Appointment Type</label>
-                  <div className="w-full bg-slate-700 border-2 border-indigo-500 text-white rounded-lg p-3 flex items-center">
-                    <Video className="w-5 h-5 mr-2 text-indigo-400" />
+                  <label className="text-th text-sm font-medium mb-2 block">Appointment Type</label>
+                  <div className="w-full bg-ib border border-ac/50 text-th rounded-lg p-3 flex items-center">
+                    <Video className="w-5 h-5 mr-2 text-ac" />
                     <span className="font-medium">Virtual Consultation</span>
-                    <span className="ml-auto text-xs text-indigo-300 bg-indigo-900/30 px-2 py-1 rounded">Default</span>
+                    <span className="ml-auto text-xs text-ac bg-ac-muted px-2 py-1 rounded">Default</span>
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-white text-sm font-medium mb-2 block">Reason for Visit</label>
-                  <Input value={newAppointment.reason} onChange={(e) => setNewAppointment({ ...newAppointment, reason: e.target.value })} placeholder="Brief description of your concern" className="bg-slate-700 border-slate-600 text-white" />
+                  <label className="text-th text-sm font-medium mb-2 block">Reason for Visit</label>
+                  <Input value={newAppointment.reason} onChange={(e) => setNewAppointment({ ...newAppointment, reason: e.target.value })} placeholder="Brief description of your concern" className="bg-ib border-ibr text-th placeholder:text-tm" />
                 </div>
               </div>
               <div className="flex space-x-4 mt-6">
-                <Button onClick={bookAppointment} disabled={!newAppointment.doctorId || !newAppointment.appointmentDate || !newAppointment.appointmentTime} className="bg-indigo-600 hover:bg-indigo-700">
+                <Button onClick={bookAppointment} disabled={!newAppointment.doctorId || !newAppointment.appointmentDate || !newAppointment.appointmentTime} className="bg-ac hover:bg-ac-hover text-primary-foreground font-medium transition-colors duration-200">
                   Confirm Booking
                 </Button>
-                <Button onClick={() => setIsBooking(false)} className="bg-slate-700 hover:bg-slate-600 text-white border-slate-600">
+                <Button onClick={() => setIsBooking(false)} className="bg-surface-alt hover:bg-surface text-ts border border-bd">
                   Cancel
                 </Button>
               </div>
@@ -540,20 +540,20 @@ export default function Appointments() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loading ? (
-            <p className="text-slate-400 col-span-full">Loading appointments...</p>
+            <p className="text-tm col-span-full">Loading appointments...</p>
           ) : appointments.length === 0 ? (
-            <Card className="bg-slate-800/50 border-slate-700 col-span-full">
+            <Card className="bg-surface border-bd col-span-full">
               <CardContent className="text-center py-12">
-                <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">No appointments scheduled</p>
+                <Calendar className="w-12 h-12 text-tm mx-auto mb-4" />
+                <p className="text-tm">No appointments scheduled</p>
               </CardContent>
             </Card>
           ) : (
             appointments.map((apt) => (
-              <Card key={apt.id} className="bg-slate-800/50 border-slate-700">
+              <Card key={apt.id} className="bg-surface border-bd hover:border-bs transition-colors duration-200">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-white text-lg">{userType === "patient" ? getDoctorTitleName(apt) : apt.patientName || "Patient Appointment"}</CardTitle>
+                    <CardTitle className="text-th text-lg">{userType === "patient" ? getDoctorTitleName(apt) : apt.patientName || "Patient Appointment"}</CardTitle>
                     {getStatusIcon(apt.status)}
                   </div>
                 </CardHeader>
@@ -563,17 +563,17 @@ export default function Appointments() {
                       (() => {
                         const info = getDoctorDetails(apt);
                         return (
-                          <div className="text-slate-400 text-sm">
-                            {info.specialization && <span className="text-indigo-300">{info.specialization}</span>}
+                          <div className="text-tm text-sm">
+                            {info.specialization && <span className="text-ac">{info.specialization}</span>}
                             {info.experience && (
                               <>
-                                <span className="mx-2 text-slate-600">•</span>
+                                <span className="mx-2 text-tm">•</span>
                                 <span>{info.experience}</span>
                               </>
                             )}
                             {info.hospital && (
                               <>
-                                <span className="mx-2 text-slate-600">•</span>
+                                <span className="mx-2 text-tm">•</span>
                                 <span>{info.hospital}</span>
                               </>
                             )}
@@ -583,38 +583,38 @@ export default function Appointments() {
                     {userType === "doctor" &&
                       (() => {
                         return (
-                          <div className="text-slate-400 text-sm">
-                            <span className="text-emerald-300">{apt.patientName || "Patient"}</span>
+                          <div className="text-tm text-sm">
+                            <span className="text-ac">{apt.patientName || "Patient"}</span>
                             {apt.patientAge && (
                               <>
-                                <span className="mx-2 text-slate-600">•</span>
+                                <span className="mx-2 text-tm">•</span>
                                 <span>{apt.patientAge} years old</span>
                               </>
                             )}
                             {apt.patientGender && (
                               <>
-                                <span className="mx-2 text-slate-600">•</span>
+                                <span className="mx-2 text-tm">•</span>
                                 <span className="capitalize">{apt.patientGender}</span>
                               </>
                             )}
                             {apt.patientPhone && (
                               <>
-                                <span className="mx-2 text-slate-600">•</span>
+                                <span className="mx-2 text-tm">•</span>
                                 <span>{apt.patientPhone}</span>
                               </>
                             )}
                           </div>
                         );
                       })()}
-                    <div className="flex items-center text-slate-300">
+                    <div className="flex items-center text-ts">
                       <Calendar className="w-4 h-4 mr-2" />
                       {new Date(apt.appointmentDate).toLocaleDateString()}
                     </div>
-                    <div className="flex items-center text-slate-300">
+                    <div className="flex items-center text-ts">
                       <Clock className="w-4 h-4 mr-2" />
                       {apt.appointmentTime} ({apt.duration} min)
                     </div>
-                    <div className="flex items-center text-slate-300">
+                    <div className="flex items-center text-ts">
                       {apt.type === "virtual" ? (
                         <>
                           <Video className="w-4 h-4 mr-2" />
@@ -627,7 +627,7 @@ export default function Appointments() {
                         </>
                       )}
                     </div>
-                    {apt.reason && <p className="text-slate-400 text-sm mt-2 italic">Reason: {apt.reason}</p>}
+                    {apt.reason && <p className="text-tm text-sm mt-2 italic">Reason: {apt.reason}</p>}
                     <div className={`px-3 py-1 rounded-full text-sm font-medium inline-block ${getStatusColor(apt.status)}`}>{apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}</div>
                     {apt.type === "virtual" && apt.status === "confirmed" && apt.meetingUrl && (
                       <Button
@@ -638,7 +638,7 @@ export default function Appointments() {
                             window.open(apt.meetingUrl, "_blank", "noopener,noreferrer");
                           }
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 w-full mt-4 disabled:bg-slate-700 disabled:text-slate-400"
+                        className="bg-emerald-600 hover:bg-emerald-700 w-full mt-4 disabled:bg-surface-alt disabled:text-tm"
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Join Meeting
@@ -646,7 +646,7 @@ export default function Appointments() {
                     )}
                     {/* Message Button - Always visible for scheduled/confirmed appointments */}
                     {(apt.status === "scheduled" || apt.status === "confirmed") && (
-                      <Button size="sm" onClick={() => openMessage(apt)} className="bg-blue-600 hover:bg-blue-700 w-full mt-4">
+                      <Button size="sm" onClick={() => openMessage(apt)} className="bg-surface-alt border border-bd hover:bg-surface text-th w-full mt-4">
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Message {userType === "patient" ? "Doctor" : "Patient"}
                       </Button>
@@ -654,7 +654,7 @@ export default function Appointments() {
                     {apt.status === "scheduled" && (
                       <div className="flex space-x-2 mt-4">
                         {userType === "doctor" && (
-                          <Button size="sm" onClick={() => updateStatus(apt.id, "confirmed")} className="bg-emerald-600 hover:bg-emerald-700 flex-1">
+                          <Button size="sm" onClick={() => updateStatus(apt.id, "confirmed")} className="bg-ac hover:bg-ac-hover text-primary-foreground flex-1">
                             Confirm
                           </Button>
                         )}
@@ -664,7 +664,7 @@ export default function Appointments() {
                       </div>
                     )}
                     {apt.status === "confirmed" && userType === "doctor" && (
-                      <Button size="sm" onClick={() => updateStatus(apt.id, "completed")} className="bg-blue-600 hover:bg-blue-700 w-full mt-4">
+                      <Button size="sm" onClick={() => updateStatus(apt.id, "completed")} className="bg-ac hover:bg-ac-hover text-primary-foreground w-full mt-4">
                         Mark Complete
                       </Button>
                     )}
@@ -673,10 +673,10 @@ export default function Appointments() {
                     {canReschedule(apt) && (
                       <div className="mt-4 space-y-2">
                         {rescheduleState.appointmentId === apt.id ? (
-                          <div className="space-y-2 bg-slate-900/50 border border-slate-700 rounded-lg p-3">
+                          <div className="space-y-2 bg-surface border border-bd rounded-lg p-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               <div>
-                                <label className="text-xs text-slate-400 block mb-1">New Date</label>
+                                <label className="text-xs text-tm block mb-1">New Date</label>
                                 <Input
                                   type="date"
                                   min={getTodayDate()}
@@ -693,13 +693,13 @@ export default function Appointments() {
                                       fetchRescheduleSlots(apt, value);
                                     }
                                   }}
-                                  className="bg-slate-800 border-slate-600 text-white"
+                                  className="bg-ib border-ibr text-th"
                                 />
                               </div>
                               <div>
-                                <label className="text-xs text-slate-400 block mb-1">New Time</label>
+                                <label className="text-xs text-tm block mb-1">New Time</label>
                                 {getFilteredRescheduleSlots().length > 0 ? (
-                                  <select value={rescheduleState.appointmentTime} onChange={(e) => setRescheduleState({ ...rescheduleState, appointmentTime: e.target.value })} className="w-full bg-slate-800 border-slate-600 text-white rounded-lg p-2 text-sm">
+                                  <select value={rescheduleState.appointmentTime} onChange={(e) => setRescheduleState({ ...rescheduleState, appointmentTime: e.target.value })} className="w-full bg-ib border-ibr text-th rounded-lg p-2 text-sm">
                                     <option value="">Select available time</option>
                                     {getFilteredRescheduleSlots().map((slot) => (
                                       <option key={slot} value={slot}>
@@ -708,25 +708,25 @@ export default function Appointments() {
                                     ))}
                                   </select>
                                 ) : (
-                                  <div className="bg-slate-800 border-slate-600 text-slate-400 rounded-lg p-2 text-xs">{rescheduleState.appointmentDate ? "No available slots for this date" : "Choose a date to see available slots"}</div>
+                                  <div className="bg-ib border-ibr text-tm rounded-lg p-2 text-xs">{rescheduleState.appointmentDate ? "No available slots for this date" : "Choose a date to see available slots"}</div>
                                 )}
                               </div>
                             </div>
                             <div>
-                              <label className="text-xs text-slate-400 block mb-1">Reason (optional)</label>
-                              <Input placeholder="Reason for reschedule" value={rescheduleState.reason} onChange={(e) => setRescheduleState({ ...rescheduleState, reason: e.target.value })} className="bg-slate-800 border-slate-600 text-white" />
+                              <label className="text-xs text-tm block mb-1">Reason (optional)</label>
+                              <Input placeholder="Reason for reschedule" value={rescheduleState.reason} onChange={(e) => setRescheduleState({ ...rescheduleState, reason: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm" />
                             </div>
                             <div className="flex space-x-2">
-                              <Button size="sm" onClick={rescheduleAppointment} disabled={!rescheduleState.appointmentDate || !rescheduleState.appointmentTime} className="bg-indigo-600 hover:bg-indigo-700 flex-1">
+                              <Button size="sm" onClick={rescheduleAppointment} disabled={!rescheduleState.appointmentDate || !rescheduleState.appointmentTime} className="bg-ac hover:bg-ac-hover text-primary-foreground flex-1">
                                 Save Reschedule
                               </Button>
-                              <Button size="sm" onClick={cancelReschedule} className="bg-slate-700 hover:bg-slate-600 flex-1">
+                              <Button size="sm" onClick={cancelReschedule} className="bg-surface-alt hover:bg-surface flex-1">
                                 Cancel
                               </Button>
                             </div>
                           </div>
                         ) : (
-                          <Button size="sm" onClick={() => openReschedule(apt)} className="bg-indigo-600 hover:bg-indigo-700 w-full mt-2">
+                          <Button size="sm" onClick={() => openReschedule(apt)} className="bg-surface-alt border border-bd hover:bg-surface text-th w-full mt-2">
                             Reschedule
                           </Button>
                         )}

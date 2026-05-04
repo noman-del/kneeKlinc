@@ -1,18 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { 
-  Brain, 
-  Camera, 
-  FileText, 
-  TrendingUp, 
-  Shield, 
-  Clock,
-  Users,
-  Zap,
-  CheckCircle,
-  ArrowRight
-} from "lucide-react";
+import { Brain, Camera, FileText, TrendingUp, Shield, Clock, Users, CheckCircle } from "lucide-react";
 
 export default function Features() {
   const [, setLocation] = useLocation();
@@ -20,122 +8,85 @@ export default function Features() {
   const features = [
     {
       icon: Brain,
+      iconColor: "text-ac",
+      iconBg: "bg-ac-muted",
       title: "AI-Powered Analysis",
       description: "Advanced machine learning algorithms analyze X-ray images with 95%+ accuracy",
-      details: [
-        "Automated Kellgren-Lawrence grading",
-        "Joint space narrowing detection",
-        "Osteophyte identification",
-        "Subchondral sclerosis assessment"
-      ]
+      details: ["Automated Kellgren-Lawrence grading", "Joint space narrowing detection", "Osteophyte identification", "Subchondral sclerosis assessment"],
     },
     {
       icon: Camera,
+      iconColor: "text-sky-400",
+      iconBg: "bg-sky-500/10",
       title: "X-Ray Image Processing",
       description: "Upload and process knee X-rays instantly with our advanced imaging system",
-      details: [
-        "DICOM format support",
-        "Image enhancement algorithms",
-        "Multi-angle analysis",
-        "Quality assessment tools"
-      ]
+      details: ["DICOM format support", "Image enhancement algorithms", "Multi-angle analysis", "Quality assessment tools"],
     },
     {
       icon: FileText,
+      iconColor: "text-violet-400",
+      iconBg: "bg-violet-500/10",
       title: "Comprehensive Reports",
       description: "Detailed diagnostic reports with treatment recommendations",
-      details: [
-        "Clinical grade documentation",
-        "Treatment pathway suggestions",
-        "Progress tracking metrics",
-        "Exportable PDF reports"
-      ]
+      details: ["Clinical grade documentation", "Treatment pathway suggestions", "Progress tracking metrics", "Exportable PDF reports"],
     },
     {
       icon: TrendingUp,
+      iconColor: "text-amber-400",
+      iconBg: "bg-amber-500/10",
       title: "Progress Monitoring",
       description: "Track patient progress over time with detailed analytics",
-      details: [
-        "Symptom progression tracking",
-        "Treatment response monitoring",
-        "Pain level assessments",
-        "Mobility improvement metrics"
-      ]
+      details: ["Symptom progression tracking", "Treatment response monitoring", "Pain level assessments", "Mobility improvement metrics"],
     },
     {
       icon: Shield,
-      title: "HIPAA Compliant",
+      iconColor: "text-emerald-400",
+      iconBg: "bg-emerald-500/10",
+      title: "Secure Platform",
       description: "Enterprise-grade security ensuring patient data protection",
-      details: [
-        "End-to-end encryption",
-        "Secure data storage",
-        "Access control management",
-        "Audit trail logging"
-      ]
+      details: ["End-to-end encryption", "Secure data storage", "Access control management", "Audit trail logging"],
     },
     {
       icon: Clock,
+      iconColor: "text-rose-400",
+      iconBg: "bg-rose-500/10",
       title: "Real-Time Processing",
       description: "Get instant results with our optimized processing pipeline",
-      details: [
-        "Sub-second image analysis",
-        "Real-time notifications",
-        "Instant report generation",
-        "Live collaboration tools"
-      ]
-    }
+      details: ["Sub-second image analysis", "Real-time notifications", "Instant report generation", "Live collaboration tools"],
+    },
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900"></div>
-      <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/10 via-transparent to-emerald-900/10"></div>
-      
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute top-40 right-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl animate-float" style={{animationDelay: '2s'}}></div>
-      <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-cyan-500/10 rounded-full blur-3xl animate-float" style={{animationDelay: '4s'}}></div>
-
-      <div className="container mx-auto px-4 py-12 relative z-10">
+    <div className="min-h-screen bg-page">
+      <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="p-6 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-3xl shadow-2xl">
-              <Zap className="h-16 w-16 text-white" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold text-white mb-6">
-            Powerful <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Features</span>
+        <div className="text-center mb-14">
+          <h1 className="text-4xl md:text-5xl font-bold text-th mb-4 tracking-tight">
+            Powerful <span className="text-ac">Features</span>
           </h1>
-          <p className="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
-            Discover the comprehensive suite of tools designed to revolutionize knee osteoarthritis 
-            diagnosis and management for both patients and healthcare providers.
-          </p>
+          <p className="text-lg text-tm max-w-3xl mx-auto leading-relaxed">Discover the comprehensive suite of tools designed to revolutionize knee osteoarthritis diagnosis and management for both patients and healthcare providers.</p>
         </div>
 
         {/* Features Grid */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-16">
+        <div className="grid lg:grid-cols-2 gap-5 mb-16">
           {features.map((feature, index) => (
-            <Card key={index} className="bg-white/10 backdrop-blur-lg border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card key={index} className="bg-surface border border-bd hover:border-bs transition-colors duration-200">
               <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-lg shadow-xl">
-                    <feature.icon className="h-8 w-8 text-white" />
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 ${feature.iconBg} rounded-lg flex items-center justify-center`}>
+                    <feature.icon className={`h-5 w-5 ${feature.iconColor}`} />
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-white">{feature.title}</CardTitle>
-                    <CardDescription className="text-base mt-1 text-slate-300">
-                      {feature.description}
-                    </CardDescription>
+                    <CardTitle className="text-lg text-th">{feature.title}</CardTitle>
+                    <CardDescription className="text-sm mt-0.5 text-tm">{feature.description}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-1.5">
                   {feature.details.map((detail, idx) => (
-                    <li key={idx} className="flex items-center space-x-2 text-white/90">
-                      <CheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <li key={idx} className="flex items-center space-x-2 text-tm text-sm">
+                      <CheckCircle className="h-3.5 w-3.5 text-ac flex-shrink-0" />
                       <span>{detail}</span>
                     </li>
                   ))}
@@ -147,70 +98,66 @@ export default function Features() {
 
         {/* User Types Section */}
         <div className="mb-16">
-          <h2 className="text-3xl font-bold text-center text-white mb-12">Designed for Everyone</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="bg-white/10 backdrop-blur-lg border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
-              <CardHeader className="text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-xl">
-                    <Users className="h-10 w-10 text-white" />
+          <h2 className="text-2xl font-bold text-center text-th mb-8">Designed for Everyone</h2>
+          <div className="grid md:grid-cols-2 gap-5">
+            <Card className="bg-surface border border-bd hover:border-bs transition-colors duration-200">
+              <CardHeader>
+                <div className="flex items-center space-x-3 mb-1">
+                  <div className="w-10 h-10 bg-ac-muted rounded-lg flex items-center justify-center">
+                    <Users className="h-5 w-5 text-ac" />
                   </div>
+                  <CardTitle className="text-xl text-th">For Patients</CardTitle>
                 </div>
-                <CardTitle className="text-2xl text-white">For Patients</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-slate-300">
-                  Take control of your knee health with personalized insights and tracking tools.
-                </p>
-                <ul className="text-left space-y-2 text-white/90">
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <CardContent className="space-y-3">
+                <p className="text-tm text-sm">Take control of your knee health with personalized insights and tracking tools.</p>
+                <ul className="space-y-1.5">
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-ac" />
                     <span>Upload and analyze your X-rays</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-ac" />
                     <span>Track symptoms and progress</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-ac" />
                     <span>Receive personalized recommendations</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-ac" />
                     <span>Access educational resources</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-lg border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
-              <CardHeader className="text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full shadow-xl">
-                    <Shield className="h-10 w-10 text-white" />
+            <Card className="bg-surface border border-bd hover:border-bs transition-colors duration-200">
+              <CardHeader>
+                <div className="flex items-center space-x-3 mb-1">
+                  <div className="w-10 h-10 bg-sky-500/10 rounded-lg flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-sky-400" />
                   </div>
+                  <CardTitle className="text-xl text-th">For Healthcare Providers</CardTitle>
                 </div>
-                <CardTitle className="text-2xl text-white">For Healthcare Providers</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-slate-300">
-                  Enhance your diagnostic capabilities with AI-powered tools and comprehensive patient data.
-                </p>
-                <ul className="text-left space-y-2 text-white/90">
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-cyan-400" />
+              <CardContent className="space-y-3">
+                <p className="text-tm text-sm">Enhance your diagnostic capabilities with AI-powered tools and comprehensive patient data.</p>
+                <ul className="space-y-1.5">
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-sky-500" />
                     <span>AI-assisted diagnosis and grading</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-cyan-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-sky-500" />
                     <span>Comprehensive patient profiles</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-cyan-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-sky-500" />
                     <span>Evidence-based treatment plans</span>
                   </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-cyan-400" />
+                  <li className="flex items-center space-x-2 text-tm text-sm">
+                    <CheckCircle className="h-3.5 w-3.5 text-sky-500" />
                     <span>Clinical documentation tools</span>
                   </li>
                 </ul>

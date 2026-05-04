@@ -44,6 +44,27 @@ export default {
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
+        // Semantic page tokens
+        page: "var(--page)",
+        surface: {
+          DEFAULT: "var(--surface)",
+          alt: "var(--surface-alt)",
+        },
+        th: "var(--text-heading)",
+        tb: "var(--text-body)",
+        ts: "var(--text-secondary)",
+        tm: "var(--text-muted)",
+        tf: "var(--text-faint)",
+        bd: "var(--border-default)",
+        bs: "var(--border-subtle)",
+        ac: {
+          DEFAULT: "var(--accent-color)",
+          hover: "var(--accent-hover)",
+          muted: "var(--accent-muted)",
+          text: "var(--accent-text)",
+        },
+        ib: "var(--input-bg)",
+        ibr: "var(--input-border)",
         chart: {
           "1": "var(--chart-1)",
           "2": "var(--chart-2)",

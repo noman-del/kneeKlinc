@@ -171,16 +171,16 @@ export default function OTPVerification({ email, onVerificationSuccess, onBack }
   };
 
   return (
-    <Card className="w-full max-w-2xl border-slate-700 bg-slate-800/50 backdrop-blur-sm">
+    <Card className="w-full max-w-2xl border-bd bg-surface">
       <CardHeader className="text-center space-y-4 pb-8">
-        <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-xl">
-          <Mail className="w-10 h-10 text-white" />
+        <div className="mx-auto w-20 h-20 bg-ac-muted rounded-full flex items-center justify-center mb-4">
+          <Mail className="w-10 h-10 text-ac" />
         </div>
-        <CardTitle className="text-3xl font-bold text-white">Verify Your Email</CardTitle>
-        <CardDescription className="text-lg text-slate-300">
+        <CardTitle className="text-3xl font-bold text-th">Verify Your Email</CardTitle>
+        <CardDescription className="text-lg text-ts">
           We've sent a 6-digit verification code to
           <br />
-          <span className="font-semibold text-blue-400 text-xl">{email}</span>
+          <span className="font-semibold text-ac text-xl">{email}</span>
         </CardDescription>
       </CardHeader>
 
@@ -199,13 +199,13 @@ export default function OTPVerification({ email, onVerificationSuccess, onBack }
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={index === 0 ? handlePaste : undefined}
-                className="w-16 h-20 text-center text-3xl font-bold bg-slate-700 border-2 border-slate-600 text-white focus:border-blue-500 focus:ring-blue-500 transition-all"
+                className="w-16 h-20 text-center text-3xl font-bold bg-surface-alt border-2 border-bd text-th focus:border-ac focus:ring-ac transition-all"
                 disabled={isVerifying}
               />
             ))}
           </div>
 
-          <Button onClick={handleVerify} disabled={isVerifying || otp.some((digit) => digit === "")} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-7 text-lg shadow-lg hover:shadow-xl transition-all">
+          <Button onClick={handleVerify} disabled={isVerifying || otp.some((digit) => digit === "")} className="w-full bg-ac hover:bg-ac-hover text-primary-foreground font-semibold py-7 text-lg transition-colors duration-200">
             {isVerifying ? (
               <>
                 <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
@@ -222,20 +222,20 @@ export default function OTPVerification({ email, onVerificationSuccess, onBack }
 
         {/* Resend Section */}
         <div className="text-center space-y-4">
-          <div className="text-base text-slate-400">
+          <div className="text-base text-tm">
             {canResend ? (
-              <span className="text-green-400 flex items-center justify-center gap-1">
+              <span className="text-emerald-500 flex items-center justify-center gap-1">
                 <CheckCircle2 className="w-4 h-4" />
                 You can now resend the code
               </span>
             ) : (
               <span>
-                Resend code in <span className="font-semibold text-blue-400">{countdown}s</span>
+                Resend code in <span className="font-semibold text-ac">{countdown}s</span>
               </span>
             )}
           </div>
 
-          <Button variant="outline" onClick={handleResend} disabled={!canResend || isResending} className="w-full border-slate-600 bg-slate-700/50 text-white hover:bg-slate-700 hover:text-white py-6 text-base">
+          <Button variant="outline" onClick={handleResend} disabled={!canResend || isResending} className="w-full border-bd bg-surface-alt text-th hover:bg-surface-alt/80 py-6 text-base">
             {isResending ? (
               <>
                 <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
@@ -251,11 +251,11 @@ export default function OTPVerification({ email, onVerificationSuccess, onBack }
         </div>
 
         {/* Info Box */}
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-5 text-base text-slate-300">
+        <div className="bg-ac-muted border border-bd rounded-lg p-5 text-base text-ts">
           <div className="flex gap-2">
-            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-ac flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="font-semibold text-blue-300 text-base">Didn't receive the code?</p>
+              <p className="font-semibold text-ac-text text-base">Didn't receive the code?</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Check your spam/junk folder</li>
                 <li>Verify the email address is correct</li>
@@ -266,7 +266,7 @@ export default function OTPVerification({ email, onVerificationSuccess, onBack }
         </div>
 
         {/* Back Button */}
-        <Button variant="ghost" onClick={onBack} className="w-full text-slate-400 hover:text-white hover:bg-slate-700 py-6 text-base">
+        <Button variant="ghost" onClick={onBack} className="w-full text-tm hover:text-th hover:bg-surface-alt py-6 text-base">
           ← Back to Sign Up
         </Button>
       </CardContent>

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Mail, Lock, Save, Eye, EyeOff, Camera, Upload, Trash2, Stethoscope, CheckCircle2, Circle } from "lucide-react";
+import { User, Mail, Lock, Save, Eye, EyeOff, Camera, Upload, Trash2, Plus, Stethoscope, Building2, Clock, CheckCircle2, Circle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
@@ -49,8 +49,22 @@ export default function Profile() {
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(user?.profileImageUrl || null);
 
+  const isDoctor = user?.userType === "doctor";
+  const isPatient = user?.userType === "patient";
+
+  // Patient profile state
+  const [patientProfile, setPatientProfile] = useState({
+    height: "",
+    weight: "",
+  });
+
+  const [originalPatientProfile, setOriginalPatientProfile] = useState({
+    height: "",
+    weight: "",
+  });
+
   // Check if profile data has changed
-  const hasProfileChanges = profileData.firstName !== originalProfileData.firstName || profileData.lastName !== originalProfileData.lastName || profileData.email !== originalProfileData.email || profilePictureFile !== null;
+  const hasProfileChanges = profileData.firstName !== originalProfileData.firstName || profileData.lastName !== originalProfileData.lastName || profileData.email !== originalProfileData.email || profilePictureFile !== null || (isPatient && (patientProfile.height !== originalPatientProfile.height || patientProfile.weight !== originalPatientProfile.weight));
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -72,7 +86,7 @@ export default function Profile() {
 
   const allPasswordRulesSatisfied = Object.values(passwordChecks).every(Boolean);
 
-  const isDoctor = user?.userType === "doctor";
+  const hasPatientChanges = patientProfile.height !== originalPatientProfile.height || patientProfile.weight !== originalPatientProfile.weight;
 
   const [doctorProfile, setDoctorProfile] = useState({
     title: "",
@@ -83,13 +97,8 @@ export default function Profile() {
     yearsOfExperience: "",
     medicalLicenseNumber: "",
     licenseState: "",
-    deaNumber: "",
-    npiNumber: "",
-    hospitalName: "",
-    department: "",
-    practiceAddress: "",
     phoneNumber: "",
-    boardCertifications: "",
+    practiceLocations: [{ hospitalName: "", department: "", address: "" }] as { hospitalName: string; department: string; address: string }[],
   });
 
   const [originalDoctorProfile, setOriginalDoctorProfile] = useState(doctorProfile);
@@ -108,6 +117,34 @@ export default function Profile() {
 
   const hasAvailabilityChanges = availability.availableStartTime !== originalAvailability.availableStartTime || availability.availableEndTime !== originalAvailability.availableEndTime || availability.slotDuration !== originalAvailability.slotDuration || JSON.stringify(availability.availableDays) !== JSON.stringify(originalAvailability.availableDays);
 
+  // Load patient profile when patient logs in
+  useEffect(() => {
+    if (!isPatient) return;
+
+    const loadPatientProfile = async () => {
+      try {
+        const res = await fetch("/api/patients/me", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const p = data.patient || {};
+        const mapped = {
+          height: p.height || "",
+          weight: p.weight || "",
+        };
+        setPatientProfile(mapped);
+        setOriginalPatientProfile(mapped);
+      } catch (error) {
+        console.error("Failed to load patient profile", error);
+      }
+    };
+
+    loadPatientProfile();
+  }, [isPatient]);
+
   // Load doctor professional profile when doctor logs in
   useEffect(() => {
     if (!isDoctor) return;
@@ -122,6 +159,15 @@ export default function Profile() {
         if (!res.ok) return;
         const data = await res.json();
         const d = data.doctor || {};
+        const locations =
+          Array.isArray(d.practiceLocations) && d.practiceLocations.length > 0
+            ? d.practiceLocations.map((loc: any) => ({
+                hospitalName: loc.hospitalName || "",
+                department: loc.department || "",
+                address: loc.address || "",
+              }))
+            : [{ hospitalName: d.hospitalName || "", department: d.department || "", address: d.practiceAddress || "" }];
+
         const mapped = {
           title: d.title || "",
           gender: d.gender || "",
@@ -131,13 +177,8 @@ export default function Profile() {
           yearsOfExperience: d.yearsOfExperience || "",
           medicalLicenseNumber: d.medicalLicenseNumber || "",
           licenseState: d.licenseState || "",
-          deaNumber: d.deaNumber || "",
-          npiNumber: d.npiNumber || "",
-          hospitalName: d.hospitalName || "",
-          department: d.department || "",
-          practiceAddress: d.practiceAddress || "",
           phoneNumber: d.phoneNumber || "",
-          boardCertifications: d.boardCertifications || "",
+          practiceLocations: locations,
         };
         setDoctorProfile(mapped);
         setOriginalDoctorProfile(mapped);
@@ -302,6 +343,15 @@ export default function Profile() {
 
       const data = await res.json();
       const d = data.doctor || {};
+      const locations =
+        Array.isArray(d.practiceLocations) && d.practiceLocations.length > 0
+          ? d.practiceLocations.map((loc: any) => ({
+              hospitalName: loc.hospitalName || "",
+              department: loc.department || "",
+              address: loc.address || "",
+            }))
+          : [{ hospitalName: "", department: "", address: "" }];
+
       const mapped = {
         title: d.title || "",
         gender: d.gender || "",
@@ -311,13 +361,8 @@ export default function Profile() {
         yearsOfExperience: d.yearsOfExperience || "",
         medicalLicenseNumber: d.medicalLicenseNumber || "",
         licenseState: d.licenseState || "",
-        deaNumber: d.deaNumber || "",
-        npiNumber: d.npiNumber || "",
-        hospitalName: d.hospitalName || "",
-        department: d.department || "",
-        practiceAddress: d.practiceAddress || "",
         phoneNumber: d.phoneNumber || "",
-        boardCertifications: d.boardCertifications || "",
+        practiceLocations: locations,
       };
       setDoctorProfile(mapped);
       setOriginalDoctorProfile(mapped);
@@ -371,6 +416,54 @@ export default function Profile() {
     }
   };
 
+  const handlePatientProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hasPatientChanges) {
+      toast({ title: "No Changes", description: "No changes were made to update.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/patients/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: JSON.stringify({
+          height: patientProfile.height || null,
+          weight: patientProfile.weight || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update patient profile");
+      }
+
+      const data = await res.json();
+      const p = data.patient || {};
+      const mapped = {
+        height: p.height || "",
+        weight: p.weight || "",
+      };
+      setPatientProfile(mapped);
+      setOriginalPatientProfile(mapped);
+
+      toast({
+        title: "Health Information Updated",
+        description: "Your height and weight have been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update patient profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -414,7 +507,7 @@ export default function Profile() {
     }
 
     // Check if email is the same as current (no change needed)
-    if (profileData.email === originalProfileData.email && profileData.firstName === originalProfileData.firstName && profileData.lastName === originalProfileData.lastName && !profilePictureFile) {
+    if (profileData.email === originalProfileData.email && profileData.firstName === originalProfileData.firstName && profileData.lastName === originalProfileData.lastName && !profilePictureFile && (!isPatient || (patientProfile.height === originalPatientProfile.height && patientProfile.weight === originalPatientProfile.weight))) {
       toast({
         title: "No Changes",
         description: "No changes were made to update.",
@@ -446,6 +539,32 @@ export default function Profile() {
 
         // Reset profile picture file state since it's been uploaded
         setProfilePictureFile(null);
+
+        // If patient, also update health information
+        if (isPatient && (patientProfile.height !== originalPatientProfile.height || patientProfile.weight !== originalPatientProfile.weight)) {
+          const patientRes = await fetch("/api/patients/me", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            },
+            body: JSON.stringify({
+              height: patientProfile.height || null,
+              weight: patientProfile.weight || null,
+            }),
+          });
+
+          if (patientRes.ok) {
+            const patientData = await patientRes.json();
+            const p = patientData.patient || {};
+            const mapped = {
+              height: p.height || "",
+              weight: p.weight || "",
+            };
+            setPatientProfile(mapped);
+            setOriginalPatientProfile(mapped);
+          }
+        }
 
         // Refresh user data in auth context
         refreshUser();
@@ -565,411 +684,490 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState("profile");
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900"></div>
-      <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-indigo-900/20"></div>
-
-      <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute top-60 right-20 w-56 h-56 bg-gradient-to-r from-purple-500/15 to-pink-500/15 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }}></div>
-      <div className="absolute bottom-32 left-1/3 w-32 h-32 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: "4s" }}></div>
-      <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 rounded-full blur-3xl animate-float" style={{ animationDelay: "6s" }}></div>
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
-            <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl">
-              <div className="flex flex-col items-center space-y-6">
-                <div className="relative">
-                  <div className="w-24 h-24 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300">
-                    <span className="text-4xl">👤</span>
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full flex items-center justify-center">
-                    <span className="text-sm">⚙️</span>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
-                    Profile <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Settings</span>
-                  </h1>
-                  <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">Manage your account information, security settings, and personal preferences</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-page">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-th mb-2 tracking-tight">
+            Profile <span className="text-ac">Settings</span>
+          </h1>
+          <p className="text-tm">Manage your account information, security settings, and personal preferences</p>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-500/10 to-indigo-500/10 rounded-3xl blur-xl"></div>
-          <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-3xl p-8">
-            {/* Profile Picture Section */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl">{profilePicturePreview || user?.profileImageUrl ? <img src={profilePicturePreview || user?.profileImageUrl} alt="Profile" className="w-full h-full object-cover" /> : <User className="w-16 h-16 text-white" />}</div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <label htmlFor="profile-picture" className="cursor-pointer">
-                    <Camera className="w-8 h-8 text-white" />
-                  </label>
-                  {(user?.profileImageUrl || profilePicturePreview) && (
-                    <button onClick={handleDeleteProfilePicture} className="w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 ml-4" title="Delete profile picture">
-                      <Trash2 className="w-4 h-4 text-white" />
-                    </button>
-                  )}
-                </div>
-                <input id="profile-picture" type="file" accept="image/*" onChange={handleProfilePictureChange} className="hidden" />
+        <div className="bg-surface border border-bd rounded-lg p-6 md:p-8">
+          {/* Profile Picture Section */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="relative group">
+              <div className="w-28 h-28 rounded-full overflow-hidden bg-surface-alt border border-bd flex items-center justify-center">{profilePicturePreview || user?.profileImageUrl ? <img src={profilePicturePreview || user?.profileImageUrl} alt="Profile" className="w-full h-full object-cover" /> : <User className="w-16 h-16 text-th" />}</div>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <label htmlFor="profile-picture" className="cursor-pointer">
+                  <Camera className="w-8 h-8 text-white" />
+                </label>
+                {(user?.profileImageUrl || profilePicturePreview) && (
+                  <button onClick={handleDeleteProfilePicture} className="w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 ml-4" title="Delete profile picture">
+                    <Trash2 className="w-4 h-4 text-white" />
+                  </button>
+                )}
               </div>
-              <p className="text-slate-300 text-sm mt-2">Click to change profile picture</p>
+              <input id="profile-picture" type="file" accept="image/*" onChange={handleProfilePictureChange} className="hidden" />
             </div>
+            <p className="text-tm text-sm mt-2">Click to change profile picture</p>
+          </div>
 
-            {/* Tab Navigation */}
-            <div className="flex border-b border-slate-600/50 mb-8">
-              <button onClick={() => setActiveTab("profile")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "profile" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
-                <div className="flex items-center justify-center space-x-2">
-                  <User className="w-5 h-5" />
-                  <span>Profile</span>
-                </div>
-              </button>
-              <button onClick={() => setActiveTab("password")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "password" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
-                <div className="flex items-center justify-center space-x-2">
-                  <Lock className="w-5 h-5" />
-                  <span>Security</span>
-                </div>
-              </button>
-              {isDoctor && (
-                <>
-                  <button onClick={() => setActiveTab("practice")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "practice" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Stethoscope className="w-5 h-5" />
-                      <span>Professional Details</span>
-                    </div>
-                  </button>
-                  <button onClick={() => setActiveTab("availability")} className={`flex-1 px-6 py-4 text-center font-semibold transition-all duration-300 relative ${activeTab === "availability" ? "bg-gradient-to-r from-indigo-500/30 to-purple-500/30 text-white border-b-2 border-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/30"}`}>
-                    <div className="flex items-center justify-center space-x-2">
-                      <Stethoscope className="w-5 h-5" />
-                      <span>Availability</span>
-                    </div>
-                  </button>
-                </>
-              )}
-            </div>
-
-            {activeTab === "profile" && (
-              <form onSubmit={handleProfileUpdate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">First Name</Label>
-                    <Input type="text" value={profileData.firstName} onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="Enter your first name" />
+          {/* Tab Navigation */}
+          <div className="flex border-b border-bd mb-8">
+            <button onClick={() => setActiveTab("profile")} className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-200 relative ${activeTab === "profile" ? "text-ac border-b-2 border-ac" : "text-tm hover:text-th"}`}>
+              <div className="flex items-center justify-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Profile</span>
+              </div>
+            </button>
+            <button onClick={() => setActiveTab("password")} className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-200 relative ${activeTab === "password" ? "text-ac border-b-2 border-ac" : "text-tm hover:text-th"}`}>
+              <div className="flex items-center justify-center space-x-2">
+                <Lock className="w-4 h-4" />
+                <span>Security</span>
+              </div>
+            </button>
+            {isDoctor && (
+              <>
+                <button onClick={() => setActiveTab("practice")} className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-200 relative ${activeTab === "practice" ? "text-ac border-b-2 border-ac" : "text-tm hover:text-th"}`}>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Stethoscope className="w-4 h-4" />
+                    <span>Professional</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Last Name</Label>
-                    <Input type="text" value={profileData.lastName} onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="Enter your last name" />
+                </button>
+                <button onClick={() => setActiveTab("practiceInfo")} className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-200 relative ${activeTab === "practiceInfo" ? "text-ac border-b-2 border-ac" : "text-tm hover:text-th"}`}>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Building2 className="w-4 h-4" />
+                    <span>Practice</span>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-200 font-medium">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input type="email" value={profileData.email} onChange={(e) => setProfileData({ ...profileData, email: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20 pl-10" placeholder="Enter your email" />
+                </button>
+                <button onClick={() => setActiveTab("availability")} className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-200 relative ${activeTab === "availability" ? "text-ac border-b-2 border-ac" : "text-tm hover:text-th"}`}>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Clock className="w-4 h-4" />
+                    <span>Availability</span>
                   </div>
-                </div>
-                <Button type="submit" disabled={!hasProfileChanges} className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Profile
-                </Button>
-              </form>
-            )}
-
-            {activeTab === "practice" && isDoctor && (
-              <form onSubmit={handleDoctorProfileUpdate} className="space-y-6">
-                <h3 className="text-xl font-display font-semibold text-white mb-2">Professional Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Title</Label>
-                    <Input type="text" value={doctorProfile.title} onChange={(e) => setDoctorProfile({ ...doctorProfile, title: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. Dr." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Gender</Label>
-                    <select value={doctorProfile.gender} onChange={(e) => setDoctorProfile({ ...doctorProfile, gender: e.target.value })} className="w-full rounded-md bg-slate-800/60 border border-slate-600/50 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400">
-                      <option value="">Select gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Date of Birth</Label>
-                    <Input type="date" value={doctorProfile.dateOfBirth} onChange={(e) => setDoctorProfile({ ...doctorProfile, dateOfBirth: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Primary Specialization</Label>
-                    <select value={doctorProfile.primarySpecialization} onChange={(e) => setDoctorProfile({ ...doctorProfile, primarySpecialization: e.target.value })} className="w-full rounded-md bg-slate-800/60 border border-slate-600/50 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400">
-                      <option value="">Select specialization</option>
-                      <option value="Orthopedic Surgery">Orthopedic Surgery</option>
-                      <option value="Rheumatology">Rheumatology</option>
-                      <option value="Sports Medicine">Sports Medicine</option>
-                      <option value="Physical Medicine & Rehabilitation">Physical Medicine & Rehabilitation</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Sub-specialization</Label>
-                    <Input type="text" value={doctorProfile.subSpecialization} onChange={(e) => setDoctorProfile({ ...doctorProfile, subSpecialization: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. Knee Arthroscopy" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Years of Experience</Label>
-                    <Input type="text" value={doctorProfile.yearsOfExperience} onChange={(e) => setDoctorProfile({ ...doctorProfile, yearsOfExperience: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. 10" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Medical License Number</Label>
-                    <Input type="text" value={doctorProfile.medicalLicenseNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, medicalLicenseNumber: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="Enter your license number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">License State / Country</Label>
-                    <Input type="text" value={doctorProfile.licenseState} onChange={(e) => setDoctorProfile({ ...doctorProfile, licenseState: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. California" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">DEA Number (if applicable)</Label>
-                    <Input type="text" value={doctorProfile.deaNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, deaNumber: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">NPI Number (if applicable)</Label>
-                    <Input type="text" value={doctorProfile.npiNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, npiNumber: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Hospital / Clinic</Label>
-                    <Input type="text" value={doctorProfile.hospitalName} onChange={(e) => setDoctorProfile({ ...doctorProfile, hospitalName: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="Hospital or clinic name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Department</Label>
-                    <Input type="text" value={doctorProfile.department} onChange={(e) => setDoctorProfile({ ...doctorProfile, department: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. Orthopedics" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-slate-200 font-medium">Practice Address</Label>
-                  <Textarea value={doctorProfile.practiceAddress} onChange={(e) => setDoctorProfile({ ...doctorProfile, practiceAddress: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="Clinic address" rows={3} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Contact Phone</Label>
-                    <Input type="text" value={doctorProfile.phoneNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, phoneNumber: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="e.g. +1 234 567 890" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">Board Certifications</Label>
-                    <Textarea value={doctorProfile.boardCertifications} onChange={(e) => setDoctorProfile({ ...doctorProfile, boardCertifications: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20" placeholder="List any board certifications" rows={3} />
-                  </div>
-                </div>
-
-                <Button type="submit" disabled={!hasDoctorChanges} className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Professional Profile
-                </Button>
-              </form>
-            )}
-
-            {activeTab === "availability" && isDoctor && (
-              <form onSubmit={handleAvailabilityUpdate} className="space-y-6">
-                <h3 className="text-xl font-display font-semibold text-white mb-2">Availability Schedule</h3>
-                <p className="text-slate-400 text-sm mb-4">Update the days and time slots when you are available for patient appointments.</p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">
-                      Start Time <span className="text-red-400">*</span>
-                    </Label>
-                    <Input type="time" value={availability.availableStartTime} onChange={(e) => setAvailability({ ...availability, availableStartTime: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">
-                      End Time <span className="text-red-400">*</span>
-                    </Label>
-                    <Input type="time" value={availability.availableEndTime} onChange={(e) => setAvailability({ ...availability, availableEndTime: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-200 font-medium">
-                      Appointment Duration (minutes) <span className="text-red-400">*</span>
-                    </Label>
-                    <select value={availability.slotDuration} onChange={(e) => setAvailability({ ...availability, slotDuration: e.target.value })} className="w-full rounded-md bg-slate-800/60 border border-slate-600/50 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/40 focus:border-indigo-400">
-                      <option value="15">15 minutes</option>
-                      <option value="30">30 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">60 minutes</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-slate-200 font-medium">
-                    Available Days <span className="text-red-400">*</span>
-                  </Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      { label: "Monday", value: 1 },
-                      { label: "Tuesday", value: 2 },
-                      { label: "Wednesday", value: 3 },
-                      { label: "Thursday", value: 4 },
-                      { label: "Friday", value: 5 },
-                      { label: "Saturday", value: 6 },
-                      { label: "Sunday", value: 0 },
-                    ].map((day) => (
-                      <div key={day.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={availability.availableDays.includes(day.value)}
-                          onCheckedChange={(checked) => {
-                            setAvailability((prev) => {
-                              const current = prev.availableDays;
-                              const exists = current.includes(day.value);
-                              let next: number[];
-                              if (checked && !exists) {
-                                next = [...current, day.value];
-                              } else if (!checked && exists) {
-                                next = current.filter((v) => v !== day.value);
-                              } else {
-                                next = current;
-                              }
-                              return { ...prev, availableDays: next };
-                            });
-                          }}
-                          className="border-white/40"
-                        />
-                        <span className="text-sm text-slate-100">{day.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Button type="submit" disabled={!hasAvailabilityChanges} className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Availability
-                </Button>
-              </form>
-            )}
-
-            {activeTab === "password" && (
-              <form onSubmit={handlePasswordUpdate} className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-slate-200 font-medium">Current Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input type={showCurrentPassword ? "text" : "password"} value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20 pl-10 pr-10" placeholder="Enter current password" required />
-                    <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white">
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-200 font-medium">New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input type={showNewPassword ? "text" : "password"} value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20 pl-10 pr-10" placeholder="Enter new password" required />
-                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white">
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <div className="mt-2 space-y-1 text-xs text-slate-300/90">
-                    <p className="font-medium text-slate-100">Password must include:</p>
-                    {[
-                      {
-                        key: "length",
-                        label: "At least 8 characters",
-                      },
-                      {
-                        key: "upper",
-                        label: "At least one uppercase letter",
-                      },
-                      {
-                        key: "lower",
-                        label: "At least one lowercase letter",
-                      },
-                      {
-                        key: "number",
-                        label: "At least one number",
-                      },
-                      {
-                        key: "special",
-                        label: "At least one special character",
-                      },
-                      {
-                        key: "noSpace",
-                        label: "No spaces",
-                      },
-                    ].map((rule) => {
-                      const satisfied = passwordChecks[rule.key as keyof typeof passwordChecks];
-                      return (
-                        <div key={rule.key} className="flex items-center space-x-2">
-                          {satisfied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-slate-600" />}
-                          <span className={satisfied ? "text-emerald-200" : "text-slate-300/90"}>{rule.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-slate-200 font-medium">Confirm New Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <Input type={showConfirmPassword ? "text" : "password"} value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="bg-slate-800/60 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-400/20 pl-10 pr-10" placeholder="Confirm new password" required />
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white">
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={!hasPasswordChanges || !allPasswordRulesSatisfied || passwordData.newPassword !== passwordData.confirmPassword}
-                  className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  <Lock className="w-4 h-4 mr-2" />
-                  Update Password
-                </Button>
-              </form>
+                </button>
+              </>
             )}
           </div>
+
+          {activeTab === "profile" && (
+            <form onSubmit={handleProfileUpdate} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">First Name</Label>
+                  <Input type="text" value={profileData.firstName} onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="Enter your first name" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Last Name</Label>
+                  <Input type="text" value={profileData.lastName} onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="Enter your last name" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-ts font-medium">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tm w-4 h-4" />
+                  <Input type="email" value={profileData.email} onChange={(e) => setProfileData({ ...profileData, email: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20 pl-10" placeholder="Enter your email" />
+                </div>
+              </div>
+
+              {isPatient && (
+                <>
+                  <h3 className="text-lg font-semibold text-th mt-6 mb-2">Health Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-ts font-medium">Height (cm)</Label>
+                      <Input type="number" value={patientProfile.height} onChange={(e) => setPatientProfile({ ...patientProfile, height: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="e.g., 175" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-ts font-medium">Weight (kg)</Label>
+                      <Input type="number" value={patientProfile.weight} onChange={(e) => setPatientProfile({ ...patientProfile, weight: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="e.g., 70" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Button type="submit" disabled={!hasProfileChanges} className="w-full h-12 bg-ac hover:bg-ac-hover text-primary-foreground font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </form>
+          )}
+
+          {activeTab === "practice" && isDoctor && (
+            <form onSubmit={handleDoctorProfileUpdate} className="space-y-6">
+              <h3 className="text-xl font-display font-semibold text-th mb-2">Professional Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Title</Label>
+                  <select value={doctorProfile.title} onChange={(e) => setDoctorProfile({ ...doctorProfile, title: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="">Select title</option>
+                    <option value="Dr.">Dr.</option>
+                    <option value="Prof. Dr.">Prof. Dr.</option>
+                    <option value="Assoc. Prof. Dr.">Assoc. Prof. Dr.</option>
+                    <option value="Asst. Prof. Dr.">Asst. Prof. Dr.</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Gender</Label>
+                  <select value={doctorProfile.gender} onChange={(e) => setDoctorProfile({ ...doctorProfile, gender: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Date of Birth</Label>
+                  <Input type="date" value={doctorProfile.dateOfBirth} onChange={(e) => setDoctorProfile({ ...doctorProfile, dateOfBirth: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Phone Number</Label>
+                  <Input type="text" value={doctorProfile.phoneNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, phoneNumber: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="03001234567" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">PMDC Registration Number</Label>
+                  <Input type="text" value={doctorProfile.medicalLicenseNumber} onChange={(e) => setDoctorProfile({ ...doctorProfile, medicalLicenseNumber: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20" placeholder="e.g. 12345-M or 123456" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Registration Province</Label>
+                  <select value={doctorProfile.licenseState} onChange={(e) => setDoctorProfile({ ...doctorProfile, licenseState: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="">Select province</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Sindh">Sindh</option>
+                    <option value="Khyber Pakhtunkhwa">Khyber Pakhtunkhwa (KPK)</option>
+                    <option value="Balochistan">Balochistan</option>
+                    <option value="Gilgit-Baltistan">Gilgit-Baltistan</option>
+                    <option value="Azad Jammu and Kashmir">Azad Jammu and Kashmir (AJK)</option>
+                    <option value="Islamabad Capital Territory">Islamabad Capital Territory</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Primary Specialization</Label>
+                  <select value={doctorProfile.primarySpecialization} onChange={(e) => setDoctorProfile({ ...doctorProfile, primarySpecialization: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="">Select specialization</option>
+                    <option value="Orthopedic Surgery">Orthopedic Surgery (Knee Specialist)</option>
+                    <option value="Rheumatology">Rheumatology (Knee & Joint)</option>
+                    <option value="Sports Medicine">Sports Medicine (Knee Injuries)</option>
+                    <option value="Physical Medicine & Rehabilitation">Physical Medicine & Rehabilitation</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">Sub-specialization</Label>
+                  <select value={doctorProfile.subSpecialization} onChange={(e) => setDoctorProfile({ ...doctorProfile, subSpecialization: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="">Select sub-specialization</option>
+                    <option value="Knee Surgery">Knee Surgery</option>
+                    <option value="Joint Replacement">Joint Replacement</option>
+                    <option value="Arthroscopy">Arthroscopy</option>
+                    <option value="Sports Injuries">Sports Injuries</option>
+                    <option value="Osteoarthritis Management">Osteoarthritis Management</option>
+                    <option value="General Orthopedics">General Orthopedics</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-ts font-medium">Years of Experience</Label>
+                <select value={doctorProfile.yearsOfExperience} onChange={(e) => setDoctorProfile({ ...doctorProfile, yearsOfExperience: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                  <option value="">Select experience</option>
+                  <option value="1-5 years">1-5 years</option>
+                  <option value="6-10 years">6-10 years</option>
+                  <option value="11-15 years">11-15 years</option>
+                  <option value="16-20 years">16-20 years</option>
+                  <option value="21+ years">21+ years</option>
+                </select>
+              </div>
+
+              <Button type="submit" disabled={!hasDoctorChanges} className="w-full h-12 bg-ac hover:bg-ac-hover text-primary-foreground font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save className="w-4 h-4 mr-2" />
+                Update Professional Profile
+              </Button>
+            </form>
+          )}
+
+          {activeTab === "practiceInfo" && isDoctor && (
+            <form onSubmit={handleDoctorProfileUpdate} className="space-y-6">
+              <h3 className="text-xl font-display font-semibold text-th mb-2">Practice Information</h3>
+              <div className="space-y-6">
+                {doctorProfile.practiceLocations.map((loc, index) => (
+                  <div key={index} className="p-5 bg-surface-alt rounded-lg border border-bd space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-th">Practice Location {index + 1}</h4>
+                      {doctorProfile.practiceLocations.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const updated = doctorProfile.practiceLocations.filter((_, i) => i !== index);
+                            setDoctorProfile({ ...doctorProfile, practiceLocations: updated });
+                          }}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-ts font-medium">Hospital / Clinic Name</Label>
+                        <Input
+                          type="text"
+                          value={loc.hospitalName}
+                          onChange={(e) => {
+                            const updated = [...doctorProfile.practiceLocations];
+                            updated[index] = { ...updated[index], hospitalName: e.target.value };
+                            setDoctorProfile({ ...doctorProfile, practiceLocations: updated });
+                          }}
+                          className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20"
+                          placeholder="Enter institution name"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-ts font-medium">Department</Label>
+                        <Input
+                          type="text"
+                          value={loc.department}
+                          onChange={(e) => {
+                            const updated = [...doctorProfile.practiceLocations];
+                            updated[index] = { ...updated[index], department: e.target.value };
+                            setDoctorProfile({ ...doctorProfile, practiceLocations: updated });
+                          }}
+                          className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20"
+                          placeholder="e.g. Orthopedics"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-ts font-medium">Practice Address</Label>
+                      <Textarea
+                        value={loc.address}
+                        onChange={(e) => {
+                          const updated = [...doctorProfile.practiceLocations];
+                          updated[index] = { ...updated[index], address: e.target.value };
+                          setDoctorProfile({ ...doctorProfile, practiceLocations: updated });
+                        }}
+                        className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20"
+                        placeholder="Enter complete address"
+                        rows={2}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDoctorProfile({
+                      ...doctorProfile,
+                      practiceLocations: [...doctorProfile.practiceLocations, { hospitalName: "", department: "", address: "" }],
+                    });
+                  }}
+                  className="w-full bg-surface-alt border-bd text-ts hover:bg-surface hover:text-th"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Another Practice Location
+                </Button>
+              </div>
+
+              <Button type="submit" disabled={!hasDoctorChanges} className="w-full h-12 bg-ac hover:bg-ac-hover text-primary-foreground font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save className="w-4 h-4 mr-2" />
+                Update Practice Information
+              </Button>
+            </form>
+          )}
+
+          {activeTab === "availability" && isDoctor && (
+            <form onSubmit={handleAvailabilityUpdate} className="space-y-6">
+              <h3 className="text-xl font-display font-semibold text-th mb-2">Availability Schedule</h3>
+              <p className="text-tm text-sm mb-4">Update the days and time slots when you are available for patient appointments.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">
+                    Start Time <span className="text-red-400">*</span>
+                  </Label>
+                  <Input type="time" value={availability.availableStartTime} onChange={(e) => setAvailability({ ...availability, availableStartTime: e.target.value })} className="bg-ib border-ibr text-th" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">
+                    End Time <span className="text-red-400">*</span>
+                  </Label>
+                  <Input type="time" value={availability.availableEndTime} onChange={(e) => setAvailability({ ...availability, availableEndTime: e.target.value })} className="bg-ib border-ibr text-th" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-ts font-medium">
+                    Appointment Duration (minutes) <span className="text-red-400">*</span>
+                  </Label>
+                  <select value={availability.slotDuration} onChange={(e) => setAvailability({ ...availability, slotDuration: e.target.value })} className="w-full rounded-md bg-ib border border-ibr text-th px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ac/20 focus:border-ac">
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-ts font-medium">
+                  Available Days <span className="text-red-400">*</span>
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "Monday", value: 1 },
+                    { label: "Tuesday", value: 2 },
+                    { label: "Wednesday", value: 3 },
+                    { label: "Thursday", value: 4 },
+                    { label: "Friday", value: 5 },
+                    { label: "Saturday", value: 6 },
+                    { label: "Sunday", value: 0 },
+                  ].map((day) => (
+                    <div key={day.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={availability.availableDays.includes(day.value)}
+                        onCheckedChange={(checked) => {
+                          setAvailability((prev) => {
+                            const current = prev.availableDays;
+                            const exists = current.includes(day.value);
+                            let next: number[];
+                            if (checked && !exists) {
+                              next = [...current, day.value];
+                            } else if (!checked && exists) {
+                              next = current.filter((v) => v !== day.value);
+                            } else {
+                              next = current;
+                            }
+                            return { ...prev, availableDays: next };
+                          });
+                        }}
+                        className="border-white/40"
+                      />
+                      <span className="text-sm text-th">{day.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Button type="submit" disabled={!hasAvailabilityChanges} className="w-full h-12 bg-ac hover:bg-ac-hover text-primary-foreground font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Save className="w-4 h-4 mr-2" />
+                Update Availability
+              </Button>
+            </form>
+          )}
+
+          {activeTab === "password" && (
+            <form onSubmit={handlePasswordUpdate} className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-ts font-medium">Current Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tm w-4 h-4" />
+                  <Input type={showCurrentPassword ? "text" : "password"} value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20 pl-10 pr-10" placeholder="Enter current password" required />
+                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-tm hover:text-th">
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-ts font-medium">New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tm w-4 h-4" />
+                  <Input type={showNewPassword ? "text" : "password"} value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20 pl-10 pr-10" placeholder="Enter new password" required />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-tm hover:text-th">
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="mt-2 space-y-1 text-xs text-tm">
+                  <p className="font-medium text-th">Password must include:</p>
+                  {[
+                    {
+                      key: "length",
+                      label: "At least 8 characters",
+                    },
+                    {
+                      key: "upper",
+                      label: "At least one uppercase letter",
+                    },
+                    {
+                      key: "lower",
+                      label: "At least one lowercase letter",
+                    },
+                    {
+                      key: "number",
+                      label: "At least one number",
+                    },
+                    {
+                      key: "special",
+                      label: "At least one special character",
+                    },
+                    {
+                      key: "noSpace",
+                      label: "No spaces",
+                    },
+                  ].map((rule) => {
+                    const satisfied = passwordChecks[rule.key as keyof typeof passwordChecks];
+                    return (
+                      <div key={rule.key} className="flex items-center space-x-2">
+                        {satisfied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Circle className="h-3.5 w-3.5 text-tm" />}
+                        <span className={satisfied ? "text-emerald-200" : "text-tm"}>{rule.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-ts font-medium">Confirm New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tm w-4 h-4" />
+                  <Input type={showConfirmPassword ? "text" : "password"} value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className="bg-ib border-ibr text-th placeholder:text-tm focus:border-ac focus:ring-ac/20 pl-10 pr-10" placeholder="Confirm new password" required />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-tm hover:text-th">
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" disabled={!hasPasswordChanges || !allPasswordRulesSatisfied || passwordData.newPassword !== passwordData.confirmPassword} className="w-full h-12 bg-ac hover:bg-ac-hover text-primary-foreground font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Lock className="w-4 h-4 mr-2" />
+                Update Password
+              </Button>
+            </form>
+          )}
         </div>
 
         {/* User Info Summary */}
-        <div className="relative mt-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-500/10 to-indigo-500/10 rounded-3xl blur-xl"></div>
-          <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl rounded-3xl p-8">
-            <div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl">{profilePicturePreview || user?.profileImageUrl ? <img src={profilePicturePreview || user?.profileImageUrl} alt="Profile" className="w-full h-full object-cover" /> : <User className="w-12 h-12 text-white" />}</div>
-                <div className="absolute -bottom-2 -right-2 px-2 py-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full text-xs font-bold text-slate-800">{user?.userType === "patient" ? "🏥" : "👨‍⚕️"}</div>
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  {user?.firstName} {user?.lastName}
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-600/40 rounded-2xl p-4">
-                    <div className="text-indigo-400 font-semibold text-sm mb-1">Account Type</div>
-                    <div className="text-white font-medium">{user?.userType === "patient" ? "Patient" : "Healthcare Provider"}</div>
-                  </div>
-                  <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-600/40 rounded-2xl p-4">
-                    <div className="text-purple-400 font-semibold text-sm mb-1">Member Since</div>
-                    <div className="text-white font-medium">{new Date(user?.createdAt || "").toLocaleDateString()}</div>
-                  </div>
-                  <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-600/40 rounded-2xl p-4">
-                    <div className="text-emerald-400 font-semibold text-sm mb-1">Status</div>
-                    <div className="flex items-center text-white font-medium">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
-                      Active
-                    </div>
+        <div className="mt-8 bg-surface border border-bd rounded-lg p-6">
+          <div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-surface-alt border border-bd flex items-center justify-center">{profilePicturePreview || user?.profileImageUrl ? <img src={profilePicturePreview || user?.profileImageUrl} alt="Profile" className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-tm" />}</div>
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-xl font-bold text-th mb-3">
+                {user?.firstName} {user?.lastName}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-surface-alt border border-bd rounded-lg p-3">
+                  <div className="text-ac font-medium text-xs mb-1">Account Type</div>
+                  <div className="text-th text-sm">{user?.userType === "patient" ? "Patient" : "Healthcare Provider"}</div>
+                </div>
+                <div className="bg-surface-alt border border-bd rounded-lg p-3">
+                  <div className="text-ac font-medium text-xs mb-1">Member Since</div>
+                  <div className="text-th text-sm">{new Date(user?.createdAt || "").toLocaleDateString()}</div>
+                </div>
+                <div className="bg-surface-alt border border-bd rounded-lg p-3">
+                  <div className="text-ac font-medium text-xs mb-1">Status</div>
+                  <div className="flex items-center text-th text-sm">
+                    <div className="w-2 h-2 bg-ac rounded-full mr-2"></div>
+                    Active
                   </div>
                 </div>
               </div>

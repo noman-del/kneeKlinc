@@ -126,15 +126,18 @@ export function registerAIRoutes(app: Express) {
 
         const aiJson: any = await aiResponse.json();
 
-        if (!aiJson?.success || !aiJson?.prediction) {
+        if (!aiJson?.success || (aiJson.kl_grade === undefined && !aiJson?.prediction?.grade_index)) {
           return res.status(400).json({
             message: "The image does not appear to show knee osteoarthritis. Please upload a valid knee OA X-ray.",
           });
         }
 
-        const gradeIndex: number = aiJson.prediction.grade_index;
-        const label: string = aiJson.prediction.label;
-        const confidence: number = aiJson.prediction.confidence_score;
+        // Handle both old API format (prediction.grade_index) and new format (kl_grade)
+        const gradeIndex: number = aiJson.kl_grade !== undefined ? aiJson.kl_grade : aiJson.prediction.grade_index;
+        const label: string = aiJson.label || aiJson.prediction?.label || `KL Grade ${gradeIndex}`;
+        const confidence: number = aiJson.soft_score || aiJson.prediction?.confidence_score || 0;
+        // Heatmap from AI (base64 data URI) — may not be present in older API versions
+        const heatmapBase64: string | undefined = aiJson.heatmap_base64 || aiJson.prediction?.heatmap_base64;
 
         // Allow KL grades 0-5 from external model
         const klGrade = String(gradeIndex);
@@ -174,6 +177,7 @@ export function registerAIRoutes(app: Express) {
           riskScore,
           oaStatus,
           recommendations,
+          gradCamUrl: heatmapBase64 || undefined,
           analysisDate: new Date(),
           isSavedToProfile: false,
         });
@@ -190,6 +194,7 @@ export function registerAIRoutes(app: Express) {
             oaStatus: analysis.oaStatus,
             recommendations: analysis.recommendations,
             xrayImageUrl: analysis.xrayImageUrl,
+            gradCamUrl: analysis.gradCamUrl || null,
             analysisDate: analysis.analysisDate,
             externalLabel: label,
             externalConfidence: confidence,
@@ -328,6 +333,7 @@ export function registerAIRoutes(app: Express) {
           oaStatus: a.oaStatus,
           recommendations: a.recommendations,
           xrayImageUrl: a.xrayImageUrl,
+          gradCamUrl: a.gradCamUrl || null,
           analysisDate: a.analysisDate,
           createdAt: a.createdAt,
         })),
@@ -398,6 +404,7 @@ export function registerAIRoutes(app: Express) {
           oaStatus: a.oaStatus,
           recommendations: a.recommendations,
           xrayImageUrl: a.xrayImageUrl,
+          gradCamUrl: a.gradCamUrl || null,
           analysisDate: a.analysisDate,
           createdAt: a.createdAt,
         };
@@ -783,7 +790,7 @@ export function registerAIRoutes(app: Express) {
               convData.title = doctorProfile.title;
               convData.specialization = doctorProfile.primarySpecialization;
               convData.experience = doctorProfile.yearsOfExperience ? `${doctorProfile.yearsOfExperience} years exp` : undefined;
-              convData.hospital = doctorProfile.hospitalName;
+              convData.hospital = doctorProfile.practiceLocations?.[0]?.hospitalName;
             }
           }
 
@@ -883,7 +890,7 @@ export function registerAIRoutes(app: Express) {
           userData.title = doctorProfile.title;
           userData.specialization = doctorProfile.primarySpecialization;
           userData.experience = doctorProfile.yearsOfExperience ? `${doctorProfile.yearsOfExperience} years exp` : undefined;
-          userData.hospital = doctorProfile.hospitalName;
+          userData.hospital = doctorProfile.practiceLocations?.[0]?.hospitalName;
         }
       }
 
